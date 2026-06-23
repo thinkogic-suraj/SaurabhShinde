@@ -11,7 +11,6 @@ $isEditMode = $requestTypeId > 0;
 $requestType = [
     'RequestTypeName' => '',
     'Description' => '',
-    'IsActive' => 1,
 ];
 $errors = [];
 
@@ -38,33 +37,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $isEditMode = $requestTypeId > 0;
     $requestType['RequestTypeName'] = trim($_POST['request_type_name'] ?? '');
     $requestType['Description'] = trim($_POST['description'] ?? '');
-    $requestType['IsActive'] = isset($_POST['is_active']) ? (int) $_POST['is_active'] : 0;
 
     if ($requestType['RequestTypeName'] === '') {
         $errors['RequestTypeName'] = 'Request type name is required.';
-    } elseif (mb_strlen($requestType['RequestTypeName']) > 100) {
-        $errors['RequestTypeName'] = 'Request type name must be 100 characters or fewer.';
+    } elseif (mb_strlen($requestType['RequestTypeName']) > 30) {
+        $errors['RequestTypeName'] = 'Request type name must be 30 characters or fewer.';
     }
 
     if ($requestType['Description'] !== '' && mb_strlen($requestType['Description']) > 200) {
         $errors['Description'] = 'Description must be 200 characters or fewer.';
     }
 
-    if ($requestType['IsActive'] !== 0 && $requestType['IsActive'] !== 1) {
-        $errors['IsActive'] = 'Please select a valid status.';
+    if ($errors === []) {
+        $duplicateStmt = $pdo->prepare(
+            'SELECT RequestTypeId
+             FROM RequestTypeMaster
+             WHERE LOWER(TRIM(RequestTypeName)) = LOWER(:request_type_name)
+               AND RequestTypeId <> :request_type_id
+             LIMIT 1'
+        );
+        $duplicateStmt->execute([
+            'request_type_name' => $requestType['RequestTypeName'],
+            'request_type_id' => $requestTypeId,
+        ]);
+
+        if ($duplicateStmt->fetch()) {
+            $errors['RequestTypeName'] = 'Request Type Name already exists.';
+        }
     }
 
     if ($errors === []) {
         if ($isEditMode) {
             $stmt = $pdo->prepare(
                 'UPDATE RequestTypeMaster
-                 SET RequestTypeName = :request_type_name, Description = :description, IsActive = :is_active
+                 SET RequestTypeName = :request_type_name, Description = :description
                  WHERE RequestTypeId = :request_type_id'
             );
             $stmt->execute([
                 'request_type_name' => $requestType['RequestTypeName'],
                 'description' => $requestType['Description'] !== '' ? $requestType['Description'] : null,
-                'is_active' => $requestType['IsActive'],
                 'request_type_id' => $requestTypeId,
             ]);
 
@@ -72,12 +83,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $stmt = $pdo->prepare(
                 'INSERT INTO RequestTypeMaster (RequestTypeName, Description, IsActive)
-                 VALUES (:request_type_name, :description, :is_active)'
+                 VALUES (:request_type_name, :description, 1)'
             );
             $stmt->execute([
                 'request_type_name' => $requestType['RequestTypeName'],
                 'description' => $requestType['Description'] !== '' ? $requestType['Description'] : null,
-                'is_active' => $requestType['IsActive'],
             ]);
 
             set_flash_message('success', 'Request Type added successfully.');
@@ -90,16 +100,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $pageTitle = $isEditMode ? 'Edit Request Type' : 'Add Request Type';
 
-render_admin_header($pageTitle, [], 'request-type');
+render_admin_header($pageTitle, [], 'request-type', false);
 ?>
-<div class="row justify-content-center">
-    <div class="col-xl-8">
+<style>
+    .form-control {
+        display: block;
+        width: 30% !important;
+    }
+    textarea.form-control {
+        width: 50% !important;
+    }
+    .page-title-box {
+        padding-bottom: 0 !important;
+    }
+</style>
+<div class="row">
+    <div class="col-12">
         <div class="card">
             <div class="card-body">
-                <h4 class="card-title mb-1"><?php echo htmlspecialchars($pageTitle, ENT_QUOTES, 'UTF-8'); ?></h4>
-                <p class="card-title-desc">
-                    <?php echo $isEditMode ? 'Update the selected Request Type record.' : 'Create a new Request Type record.'; ?>
-                </p>
+                <div class="d-flex flex-wrap align-items-center justify-content-between mb-4">
+                    <div class="page-title-box">
+                        <h4 class="mb-1"><?php echo htmlspecialchars($pageTitle, ENT_QUOTES, 'UTF-8'); ?></h4>
+                        <div>
+                            <ol class="breadcrumb m-0">
+                                <li class="breadcrumb-item"><a href="dashboard.php">Dashboard</a></li>
+                                <li class="breadcrumb-item active"><?php echo htmlspecialchars($pageTitle, ENT_QUOTES, 'UTF-8'); ?></li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
 
                 <form class="custom-validation" method="POST" action="" novalidate>
                     <input type="hidden" name="request_type_id" value="<?php echo (int) $requestTypeId; ?>">
@@ -112,12 +141,13 @@ render_admin_header($pageTitle, [], 'request-type');
                             id="request_type_name"
                             name="request_type_name"
                             required
-                            maxlength="100"
+                            maxlength="30"
                             value="<?php echo htmlspecialchars((string) $requestType['RequestTypeName'], ENT_QUOTES, 'UTF-8'); ?>"
                             placeholder="Enter request type name"
                             data-parsley-required-message="Request type name is required."
-                            data-parsley-maxlength="100"
-                            data-parsley-maxlength-message="Request type name must be 100 characters or fewer."
+                            data-parsley-maxlength="30"
+                            data-parsley-maxlength-message="Request type name must be 30 characters or fewer."
+                            data-parsley-whitespace="trim"
                         >
                         <?php if (isset($errors['RequestTypeName'])): ?>
                             <div class="invalid-feedback"><?php echo htmlspecialchars($errors['RequestTypeName'], ENT_QUOTES, 'UTF-8'); ?></div>
@@ -135,31 +165,15 @@ render_admin_header($pageTitle, [], 'request-type');
                             placeholder="Enter description"
                             data-parsley-maxlength="200"
                             data-parsley-maxlength-message="Description must be 200 characters or fewer."
+                            data-parsley-whitespace="trim"
                         ><?php echo htmlspecialchars((string) ($requestType['Description'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></textarea>
                         <?php if (isset($errors['Description'])): ?>
                             <div class="invalid-feedback"><?php echo htmlspecialchars($errors['Description'], ENT_QUOTES, 'UTF-8'); ?></div>
                         <?php endif; ?>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="is_active" class="form-label">Status</label>
-                        <select
-                            class="form-select<?php echo isset($errors['IsActive']) ? ' is-invalid' : ''; ?>"
-                            id="is_active"
-                            name="is_active"
-                            required
-                            data-parsley-required-message="Status is required."
-                        >
-                            <option value="1" <?php echo (int) $requestType['IsActive'] === 1 ? 'selected' : ''; ?>>Active</option>
-                            <option value="0" <?php echo (int) $requestType['IsActive'] === 0 ? 'selected' : ''; ?>>Inactive</option>
-                        </select>
-                        <?php if (isset($errors['IsActive'])): ?>
-                            <div class="invalid-feedback"><?php echo htmlspecialchars($errors['IsActive'], ENT_QUOTES, 'UTF-8'); ?></div>
-                        <?php endif; ?>
-                    </div>
-
                     <div class="mb-0">
-                        <button type="submit" class="btn btn-primary waves-effect waves-light me-1">
+                        <button type="submit" class="btn btn-primary waves-effect waves-light me-1" style="background-color: #002253; border-color: #002253;">
                             <?php echo $isEditMode ? 'Update' : 'Save'; ?>
                         </button>
                         <a href="request-types.php" class="btn btn-secondary waves-effect">Cancel</a>
@@ -169,6 +183,16 @@ render_admin_header($pageTitle, [], 'request-type');
         </div>
     </div>
 </div>
+<script>
+    window.Parsley.addValidator('whitespace', {
+        validateString: function (value) {
+            return value.trim().length > 0 || value.length === 0;
+        },
+        messages: {
+            en: 'Request type name is required.'
+        }
+    });
+</script>
 <?php
 render_admin_footer([
     app_asset('assets/libs/parsleyjs/parsley.min.js'),

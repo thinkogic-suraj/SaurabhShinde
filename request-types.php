@@ -5,8 +5,31 @@ require __DIR__ . '/includes/layout.php';
 
 require_admin_login();
 
-$flash = get_flash_message();
 $pdo = app_pdo();
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete') {
+    $requestTypeIdToDelete = (int) ($_POST['request_type_id'] ?? 0);
+
+    if ($requestTypeIdToDelete > 0) {
+        try {
+            $deleteStmt = $pdo->prepare('UPDATE RequestTypeMaster SET IsActive = 0 WHERE RequestTypeId = :request_type_id');
+            $deleteStmt->execute(['request_type_id' => $requestTypeIdToDelete]);
+
+            if ($deleteStmt->rowCount() > 0) {
+                set_flash_message('success', 'Request Type deactivated successfully.');
+            } else {
+                set_flash_message('danger', 'Selected request type record was not found.');
+            }
+        } catch (PDOException $e) {
+            set_flash_message('danger', 'Request Type could not be deleted because it is linked to other records.');
+        }
+    }
+
+    header('Location: request-types.php');
+    exit;
+}
+
+$flash = get_flash_message();
 $requestTypes = $pdo->query(
     'SELECT RequestTypeId, RequestTypeName, Description, IsActive
      FROM RequestTypeMaster
@@ -17,8 +40,18 @@ render_admin_header('Request Type Master', [
     app_asset('assets/libs/datatables.net-bs4/css/dataTables.bootstrap4.min.css'),
     app_asset('assets/libs/datatables.net-buttons-bs4/css/buttons.bootstrap4.min.css'),
     app_asset('assets/libs/datatables.net-responsive-bs4/css/responsive.bootstrap4.min.css'),
-], 'request-type');
+], 'request-type', false);
 ?>
+<style>
+    #request-type-table td, #request-type-table th {
+        padding-top: 0.5rem !important;
+        padding-bottom: 0.5rem !important;
+    }
+    .dataTables_paginate .page-link {
+        padding: 0.25rem 0.5rem !important;
+        font-size: 0.875rem !important;
+    }
+</style>
 <div class="row">
     <div class="col-12">
         <?php if ($flash !== null): ?>
@@ -26,37 +59,65 @@ render_admin_header('Request Type Master', [
                 <?php echo htmlspecialchars($flash['message'], ENT_QUOTES, 'UTF-8'); ?>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
+            <script>
+                setTimeout(function() {
+                    var alertNode = document.querySelector('.alert');
+                    if (alertNode) {
+                        var alert = new bootstrap.Alert(alertNode);
+                        alert.close();
+                    }
+                }, 5000);
+            </script>
         <?php endif; ?>
 
         <div class="card">
             <div class="card-body">
-                <div class="d-flex flex-wrap align-items-center justify-content-between mb-4">
-                    <div>
-                        <h4 class="card-title mb-1">Request Type List</h4>
-                        <p class="card-title-desc mb-0">Manage Request Type records with search, sorting, pagination, and edit actions.</p>
+                <div class="d-flex flex-wrap align-items-center justify-content-between">
+                    <div class="page-title-box">
+                        <h4 class="mb-1">Request Type Master</h4>
+                        <div>
+                            <ol class="breadcrumb m-0">
+                                <li class="breadcrumb-item"><a href="dashboard.php">Dashboard</a></li>
+                                <li class="breadcrumb-item active">Request Type Master</li>
+                            </ol>
+                        </div>
                     </div>
-                    <a href="request-type-form.php" class="btn btn-primary waves-effect waves-light">
+                    <a href="request-type-form.php" class="btn btn-primary waves-effect waves-light" style="background-color: #002253; border-color: #002253;">
                         <i class="ri-add-line align-middle me-1"></i> Add New Request Type
                     </a>
                 </div>
 
                 <div class="table-responsive">
                     <table id="request-type-table" class="table table-bordered dt-responsive nowrap w-100 align-middle">
-                        <thead>
+                        <thead style="background-color: #f8f9fa;">
                             <tr>
                                 <th>Request Type ID</th>
                                 <th>Request Type Name</th>
                                 <th>Description</th>
                                 <th>Status</th>
-                                <th>Action</th>
+                                <th style="width: 140px;">Action</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php foreach ($requestTypes as $requestType): ?>
+                                <?php
+                                $fullRequestTypeName = (string) $requestType['RequestTypeName'];
+                                $displayRequestTypeName = mb_strlen($fullRequestTypeName) > 20
+                                    ? mb_substr($fullRequestTypeName, 0, 20) . '...'
+                                    : $fullRequestTypeName;
+                                $fullDescription = (string) ($requestType['Description'] ?? '');
+                                $displayDescription = mb_strlen($fullDescription) > 20
+                                    ? mb_substr($fullDescription, 0, 20) . '...'
+                                    : $fullDescription;
+                                ?>
                                 <tr>
                                     <td><?php echo (int) $requestType['RequestTypeId']; ?></td>
-                                    <td><?php echo htmlspecialchars($requestType['RequestTypeName'], ENT_QUOTES, 'UTF-8'); ?></td>
-                                    <td><?php echo htmlspecialchars((string) ($requestType['Description'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
+                                    <td title="<?php echo htmlspecialchars($fullRequestTypeName, ENT_QUOTES, 'UTF-8'); ?>">
+                                        <?php echo htmlspecialchars($displayRequestTypeName, ENT_QUOTES, 'UTF-8'); ?>
+                                    </td>
+                                    <td title="<?php echo htmlspecialchars($fullDescription, ENT_QUOTES, 'UTF-8'); ?>">
+                                        <?php echo htmlspecialchars($displayDescription, ENT_QUOTES, 'UTF-8'); ?>
+                                    </td>
                                     <td>
                                         <?php if ((int) $requestType['IsActive'] === 1): ?>
                                             <span class="badge rounded-pill bg-success">Active</span>
@@ -65,9 +126,18 @@ render_admin_header('Request Type Master', [
                                         <?php endif; ?>
                                     </td>
                                     <td>
-                                        <a href="request-type-form.php?id=<?php echo (int) $requestType['RequestTypeId']; ?>" class="btn btn-sm btn-outline-primary">
-                                            <i class="ri-edit-2-line align-middle me-1"></i> Edit
-                                        </a>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <a href="request-type-form.php?id=<?php echo (int) $requestType['RequestTypeId']; ?>" class="btn btn-sm" style="background-color: #002253; border-color: #002253; color: white;">
+                                                <i class="ri-edit-2-line align-middle me-1"></i> Edit
+                                            </a>
+                                            <form method="POST" action="" class="m-0 delete-request-type-form">
+                                                <input type="hidden" name="action" value="delete">
+                                                <input type="hidden" name="request_type_id" value="<?php echo (int) $requestType['RequestTypeId']; ?>">
+                                                <button type="submit" class="btn btn-sm" style="background-color: #dc3545; border-color: #dc3545; color: white;">
+                                                    <i class="ri-delete-bin-line align-middle me-1"></i> Delete
+                                                </button>
+                                            </form>
+                                        </div>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -80,10 +150,21 @@ render_admin_header('Request Type Master', [
 </div>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        $('#request-type-table').DataTable({
+        const requestTypeTable = $('#request-type-table').DataTable({
             responsive: true,
             pageLength: 10,
+            lengthChange: false,
             order: [[0, 'desc']]
+        });
+
+        $('.dataTables_filter').css('text-align', 'left').appendTo($('#request-type-table_wrapper .row:first-child > div:first-child'));
+
+        document.querySelectorAll('.delete-request-type-form').forEach(function (form) {
+            form.addEventListener('submit', function (event) {
+                if (!window.confirm('Are you sure you want to delete this request type?')) {
+                    event.preventDefault();
+                }
+            });
         });
     });
 </script>

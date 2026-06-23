@@ -10,7 +10,6 @@ $ageCategoryId = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 $isEditMode = $ageCategoryId > 0;
 $ageCategory = [
     'CategoryName' => '',
-    'IsActive' => 1,
 ];
 $errors = [];
 
@@ -36,28 +35,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $ageCategoryId = (int) ($_POST['age_category_id'] ?? $ageCategoryId);
     $isEditMode = $ageCategoryId > 0;
     $ageCategory['CategoryName'] = trim($_POST['category_name'] ?? '');
-    $ageCategory['IsActive'] = isset($_POST['is_active']) ? (int) $_POST['is_active'] : 0;
 
     if ($ageCategory['CategoryName'] === '') {
         $errors['CategoryName'] = 'Category name is required.';
-    } elseif (mb_strlen($ageCategory['CategoryName']) > 50) {
-        $errors['CategoryName'] = 'Category name must be 50 characters or fewer.';
+    } elseif (mb_strlen($ageCategory['CategoryName']) > 30) {
+        $errors['CategoryName'] = 'Category name must be 30 characters or fewer.';
     }
 
-    if ($ageCategory['IsActive'] !== 0 && $ageCategory['IsActive'] !== 1) {
-        $errors['IsActive'] = 'Please select a valid status.';
+    if ($errors === []) {
+        $duplicateStmt = $pdo->prepare(
+            'SELECT AgeCategoryId
+             FROM AgeCategoryMaster
+             WHERE LOWER(TRIM(CategoryName)) = LOWER(:category_name)
+               AND AgeCategoryId <> :age_category_id
+             LIMIT 1'
+        );
+        $duplicateStmt->execute([
+            'category_name' => $ageCategory['CategoryName'],
+            'age_category_id' => $ageCategoryId,
+        ]);
+
+        if ($duplicateStmt->fetch()) {
+            $errors['CategoryName'] = 'Category Name already exists.';
+        }
     }
 
     if ($errors === []) {
         if ($isEditMode) {
             $stmt = $pdo->prepare(
                 'UPDATE AgeCategoryMaster
-                 SET CategoryName = :category_name, IsActive = :is_active
+                 SET CategoryName = :category_name
                  WHERE AgeCategoryId = :age_category_id'
             );
             $stmt->execute([
                 'category_name' => $ageCategory['CategoryName'],
-                'is_active' => $ageCategory['IsActive'],
                 'age_category_id' => $ageCategoryId,
             ]);
 
@@ -65,11 +76,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $stmt = $pdo->prepare(
                 'INSERT INTO AgeCategoryMaster (CategoryName, IsActive)
-                 VALUES (:category_name, :is_active)'
+                 VALUES (:category_name, 1)'
             );
             $stmt->execute([
                 'category_name' => $ageCategory['CategoryName'],
-                'is_active' => $ageCategory['IsActive'],
             ]);
 
             set_flash_message('success', 'Age Category added successfully.');
@@ -82,16 +92,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $pageTitle = $isEditMode ? 'Edit Age Category' : 'Add Age Category';
 
-render_admin_header($pageTitle, [], 'age-category');
+render_admin_header($pageTitle, [], 'age-category', false);
 ?>
-<div class="row justify-content-center">
-    <div class="col-xl-8">
+<style>
+    .form-control {
+        display: block;
+        width: 30% !important;
+    }
+    .page-title-box {
+        padding-bottom: 0 !important;
+    }
+</style>
+<div class="row">
+    <div class="col-12">
         <div class="card">
             <div class="card-body">
-                <h4 class="card-title mb-1"><?php echo htmlspecialchars($pageTitle, ENT_QUOTES, 'UTF-8'); ?></h4>
-                <p class="card-title-desc">
-                    <?php echo $isEditMode ? 'Update the selected Age Category record.' : 'Create a new Age Category record.'; ?>
-                </p>
+                <div class="d-flex flex-wrap align-items-center justify-content-between mb-4">
+                    <div class="page-title-box">
+                        <h4 class="mb-1"><?php echo htmlspecialchars($pageTitle, ENT_QUOTES, 'UTF-8'); ?></h4>
+                        <div>
+                            <ol class="breadcrumb m-0">
+                                <li class="breadcrumb-item"><a href="dashboard.php">Dashboard</a></li>
+                                <li class="breadcrumb-item active"><?php echo htmlspecialchars($pageTitle, ENT_QUOTES, 'UTF-8'); ?></li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
 
                 <form class="custom-validation" method="POST" action="" novalidate>
                     <input type="hidden" name="age_category_id" value="<?php echo (int) $ageCategoryId; ?>">
@@ -104,37 +130,21 @@ render_admin_header($pageTitle, [], 'age-category');
                             id="category_name"
                             name="category_name"
                             required
-                            maxlength="50"
+                            maxlength="30"
                             value="<?php echo htmlspecialchars((string) $ageCategory['CategoryName'], ENT_QUOTES, 'UTF-8'); ?>"
                             placeholder="Enter category name"
                             data-parsley-required-message="Category name is required."
-                            data-parsley-maxlength="50"
-                            data-parsley-maxlength-message="Category name must be 50 characters or fewer."
+                            data-parsley-maxlength="30"
+                            data-parsley-maxlength-message="Category name must be 30 characters or fewer."
+                            data-parsley-whitespace="trim"
                         >
                         <?php if (isset($errors['CategoryName'])): ?>
                             <div class="invalid-feedback"><?php echo htmlspecialchars($errors['CategoryName'], ENT_QUOTES, 'UTF-8'); ?></div>
                         <?php endif; ?>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="is_active" class="form-label">Status</label>
-                        <select
-                            class="form-select<?php echo isset($errors['IsActive']) ? ' is-invalid' : ''; ?>"
-                            id="is_active"
-                            name="is_active"
-                            required
-                            data-parsley-required-message="Status is required."
-                        >
-                            <option value="1" <?php echo (int) $ageCategory['IsActive'] === 1 ? 'selected' : ''; ?>>Active</option>
-                            <option value="0" <?php echo (int) $ageCategory['IsActive'] === 0 ? 'selected' : ''; ?>>Inactive</option>
-                        </select>
-                        <?php if (isset($errors['IsActive'])): ?>
-                            <div class="invalid-feedback"><?php echo htmlspecialchars($errors['IsActive'], ENT_QUOTES, 'UTF-8'); ?></div>
-                        <?php endif; ?>
-                    </div>
-
                     <div class="mb-0">
-                        <button type="submit" class="btn btn-primary waves-effect waves-light me-1">
+                        <button type="submit" class="btn btn-primary waves-effect waves-light me-1" style="background-color: #002253; border-color: #002253;">
                             <?php echo $isEditMode ? 'Update' : 'Save'; ?>
                         </button>
                         <a href="age-categories.php" class="btn btn-secondary waves-effect">Cancel</a>
@@ -144,6 +154,16 @@ render_admin_header($pageTitle, [], 'age-category');
         </div>
     </div>
 </div>
+<script>
+    window.Parsley.addValidator('whitespace', {
+        validateString: function (value) {
+            return value.trim().length > 0;
+        },
+        messages: {
+            en: 'Category name is required.'
+        }
+    });
+</script>
 <?php
 render_admin_footer([
     app_asset('assets/libs/parsleyjs/parsley.min.js'),

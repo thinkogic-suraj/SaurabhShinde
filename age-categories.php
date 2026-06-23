@@ -5,8 +5,31 @@ require __DIR__ . '/includes/layout.php';
 
 require_admin_login();
 
-$flash = get_flash_message();
 $pdo = app_pdo();
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete') {
+    $ageCategoryIdToDelete = (int) ($_POST['age_category_id'] ?? 0);
+
+    if ($ageCategoryIdToDelete > 0) {
+        try {
+            $deleteStmt = $pdo->prepare('UPDATE AgeCategoryMaster SET IsActive = 0 WHERE AgeCategoryId = :age_category_id');
+            $deleteStmt->execute(['age_category_id' => $ageCategoryIdToDelete]);
+
+            if ($deleteStmt->rowCount() > 0) {
+                set_flash_message('success', 'Age Category deactivated successfully.');
+            } else {
+                set_flash_message('danger', 'Selected age category record was not found.');
+            }
+        } catch (PDOException $e) {
+            set_flash_message('danger', 'Age Category could not be deleted because it is linked to other records.');
+        }
+    }
+
+    header('Location: age-categories.php');
+    exit;
+}
+
+$flash = get_flash_message();
 $ageCategories = $pdo->query(
     'SELECT AgeCategoryId, CategoryName, IsActive
      FROM AgeCategoryMaster
@@ -17,8 +40,18 @@ render_admin_header('Age Category Master', [
     app_asset('assets/libs/datatables.net-bs4/css/dataTables.bootstrap4.min.css'),
     app_asset('assets/libs/datatables.net-buttons-bs4/css/buttons.bootstrap4.min.css'),
     app_asset('assets/libs/datatables.net-responsive-bs4/css/responsive.bootstrap4.min.css'),
-], 'age-category');
+], 'age-category', false);
 ?>
+<style>
+    #age-category-table td, #age-category-table th {
+        padding-top: 0.5rem !important;
+        padding-bottom: 0.5rem !important;
+    }
+    .dataTables_paginate .page-link {
+        padding: 0.25rem 0.5rem !important;
+        font-size: 0.875rem !important;
+    }
+</style>
 <div class="row">
     <div class="col-12">
         <?php if ($flash !== null): ?>
@@ -26,35 +59,57 @@ render_admin_header('Age Category Master', [
                 <?php echo htmlspecialchars($flash['message'], ENT_QUOTES, 'UTF-8'); ?>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
+            <script>
+                setTimeout(function() {
+                    var alertNode = document.querySelector('.alert');
+                    if (alertNode) {
+                        var alert = new bootstrap.Alert(alertNode);
+                        alert.close();
+                    }
+                }, 5000);
+            </script>
         <?php endif; ?>
 
         <div class="card">
             <div class="card-body">
-                <div class="d-flex flex-wrap align-items-center justify-content-between mb-4">
-                    <div>
-                        <h4 class="card-title mb-1">Age Category List</h4>
-                        <p class="card-title-desc mb-0">Manage Age Category records with search, sorting, pagination, and edit actions.</p>
+                <div class="d-flex flex-wrap align-items-center justify-content-between">
+                    <div class="page-title-box">
+                        <h4 class="mb-1">Age Category Master</h4>
+                        <div>
+                            <ol class="breadcrumb m-0">
+                                <li class="breadcrumb-item"><a href="dashboard.php">Dashboard</a></li>
+                                <li class="breadcrumb-item active">Age Category Master</li>
+                            </ol>
+                        </div>
                     </div>
-                    <a href="age-category-form.php" class="btn btn-primary waves-effect waves-light">
+                    <a href="age-category-form.php" class="btn btn-primary waves-effect waves-light" style="background-color: #002253; border-color: #002253;">
                         <i class="ri-add-line align-middle me-1"></i> Add New Age Category
                     </a>
                 </div>
 
                 <div class="table-responsive">
                     <table id="age-category-table" class="table table-bordered dt-responsive nowrap w-100 align-middle">
-                        <thead>
+                        <thead style="background-color: #f8f9fa;">
                             <tr>
                                 <th>Age Category ID</th>
                                 <th>Category Name</th>
                                 <th>Status</th>
-                                <th>Action</th>
+                                <th style="width: 140px;">Action</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php foreach ($ageCategories as $ageCategory): ?>
+                                <?php
+                                $fullCategoryName = (string) $ageCategory['CategoryName'];
+                                $displayCategoryName = mb_strlen($fullCategoryName) > 20
+                                    ? mb_substr($fullCategoryName, 0, 20) . '...'
+                                    : $fullCategoryName;
+                                ?>
                                 <tr>
                                     <td><?php echo (int) $ageCategory['AgeCategoryId']; ?></td>
-                                    <td><?php echo htmlspecialchars($ageCategory['CategoryName'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                    <td title="<?php echo htmlspecialchars($fullCategoryName, ENT_QUOTES, 'UTF-8'); ?>">
+                                        <?php echo htmlspecialchars($displayCategoryName, ENT_QUOTES, 'UTF-8'); ?>
+                                    </td>
                                     <td>
                                         <?php if ((int) $ageCategory['IsActive'] === 1): ?>
                                             <span class="badge rounded-pill bg-success">Active</span>
@@ -63,9 +118,18 @@ render_admin_header('Age Category Master', [
                                         <?php endif; ?>
                                     </td>
                                     <td>
-                                        <a href="age-category-form.php?id=<?php echo (int) $ageCategory['AgeCategoryId']; ?>" class="btn btn-sm btn-outline-primary">
-                                            <i class="ri-edit-2-line align-middle me-1"></i> Edit
-                                        </a>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <a href="age-category-form.php?id=<?php echo (int) $ageCategory['AgeCategoryId']; ?>" class="btn btn-sm" style="background-color: #002253; border-color: #002253; color: white;">
+                                                <i class="ri-edit-2-line align-middle me-1"></i> Edit
+                                            </a>
+                                            <form method="POST" action="" class="m-0 delete-age-category-form">
+                                                <input type="hidden" name="action" value="delete">
+                                                <input type="hidden" name="age_category_id" value="<?php echo (int) $ageCategory['AgeCategoryId']; ?>">
+                                                <button type="submit" class="btn btn-sm" style="background-color: #dc3545; border-color: #dc3545; color: white;">
+                                                    <i class="ri-delete-bin-line align-middle me-1"></i> Delete
+                                                </button>
+                                            </form>
+                                        </div>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -78,10 +142,21 @@ render_admin_header('Age Category Master', [
 </div>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        $('#age-category-table').DataTable({
+        const ageCategoryTable = $('#age-category-table').DataTable({
             responsive: true,
             pageLength: 10,
+            lengthChange: false,
             order: [[0, 'desc']]
+        });
+
+        $('.dataTables_filter').css('text-align', 'left').appendTo($('#age-category-table_wrapper .row:first-child > div:first-child'));
+
+        document.querySelectorAll('.delete-age-category-form').forEach(function (form) {
+            form.addEventListener('submit', function (event) {
+                if (!window.confirm('Are you sure you want to delete this age category?')) {
+                    event.preventDefault();
+                }
+            });
         });
     });
 </script>

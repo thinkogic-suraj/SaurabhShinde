@@ -11,7 +11,6 @@ $isEditMode = $areaId > 0;
 $area = [
     'WardId' => 0,
     'AreaName' => '',
-    'IsActive' => 1,
 ];
 $errors = [];
 
@@ -36,7 +35,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $isEditMode = $areaId > 0;
     $area['WardId'] = (int) ($_POST['ward_id'] ?? 0);
     $area['AreaName'] = trim($_POST['area_name'] ?? '');
-    $area['IsActive'] = isset($_POST['is_active']) ? (int) $_POST['is_active'] : 0;
 
     $validWardIds = array_map(static fn(array $ward): int => (int) $ward['WardId'], $wards);
 
@@ -46,25 +44,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($area['AreaName'] === '') {
         $errors['AreaName'] = 'Area name is required.';
-    } elseif (mb_strlen($area['AreaName']) > 200) {
-        $errors['AreaName'] = 'Area name must be 200 characters or fewer.';
+    } elseif (mb_strlen($area['AreaName']) > 30) {
+        $errors['AreaName'] = 'Area name must be 30 characters or fewer.';
     }
 
-    if ($area['IsActive'] !== 0 && $area['IsActive'] !== 1) {
-        $errors['IsActive'] = 'Please select a valid status.';
+    if ($errors === []) {
+        $duplicateStmt = $pdo->prepare(
+            'SELECT AreaId
+             FROM Area
+             WHERE WardId = :ward_id
+               AND LOWER(TRIM(AreaName)) = LOWER(:area_name)
+               AND AreaId <> :area_id
+             LIMIT 1'
+        );
+        $duplicateStmt->execute([
+            'ward_id' => $area['WardId'],
+            'area_name' => $area['AreaName'],
+            'area_id' => $areaId,
+        ]);
+
+        if ($duplicateStmt->fetch()) {
+            $errors['AreaName'] = 'Area Name already exists for the selected Ward.';
+        }
     }
 
     if ($errors === []) {
         if ($isEditMode) {
             $stmt = $pdo->prepare(
                 'UPDATE Area
-                 SET WardId = :ward_id, AreaName = :area_name, IsActive = :is_active
+                 SET WardId = :ward_id, AreaName = :area_name
                  WHERE AreaId = :area_id'
             );
             $stmt->execute([
                 'ward_id' => $area['WardId'],
                 'area_name' => $area['AreaName'],
-                'is_active' => $area['IsActive'],
                 'area_id' => $areaId,
             ]);
 
@@ -72,12 +85,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $stmt = $pdo->prepare(
                 'INSERT INTO Area (WardId, AreaName, IsActive)
-                 VALUES (:ward_id, :area_name, :is_active)'
+                 VALUES (:ward_id, :area_name, 1)'
             );
             $stmt->execute([
                 'ward_id' => $area['WardId'],
                 'area_name' => $area['AreaName'],
-                'is_active' => $area['IsActive'],
             ]);
 
             set_flash_message('success', 'Area added successfully.');
@@ -90,16 +102,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $pageTitle = $isEditMode ? 'Edit Area' : 'Add Area';
 
-render_admin_header($pageTitle, [], 'area');
+render_admin_header($pageTitle, [], 'area', false);
 ?>
-<div class="row justify-content-center">
-    <div class="col-xl-8">
+<style>
+    .form-control,
+    .form-select {
+        display: block;
+        width: 30% !important;
+    }
+    .page-title-box {
+        padding-bottom: 0 !important;
+    }
+</style>
+<div class="row">
+    <div class="col-12">
         <div class="card">
             <div class="card-body">
-                <h4 class="card-title mb-1"><?php echo htmlspecialchars($pageTitle, ENT_QUOTES, 'UTF-8'); ?></h4>
-                <p class="card-title-desc">
-                    <?php echo $isEditMode ? 'Update the selected Area record.' : 'Create a new Area record.'; ?>
-                </p>
+                <div class="d-flex flex-wrap align-items-center justify-content-between mb-4">
+                    <div class="page-title-box">
+                        <h4 class="mb-1"><?php echo htmlspecialchars($pageTitle, ENT_QUOTES, 'UTF-8'); ?></h4>
+                        <div>
+                            <ol class="breadcrumb m-0">
+                                <li class="breadcrumb-item"><a href="dashboard.php">Dashboard</a></li>
+                                <li class="breadcrumb-item active"><?php echo htmlspecialchars($pageTitle, ENT_QUOTES, 'UTF-8'); ?></li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
 
                 <form class="custom-validation" method="POST" action="" novalidate>
                     <input type="hidden" name="area_id" value="<?php echo (int) $areaId; ?>">
@@ -112,6 +141,7 @@ render_admin_header($pageTitle, [], 'area');
                             name="ward_id"
                             required
                             data-parsley-required-message="Ward is required."
+                            data-parsley-whitespace="trim"
                         >
                             <option value="">Select Ward</option>
                             <?php foreach ($wards as $ward): ?>
@@ -136,37 +166,21 @@ render_admin_header($pageTitle, [], 'area');
                             id="area_name"
                             name="area_name"
                             required
-                            maxlength="200"
+                            maxlength="30"
                             value="<?php echo htmlspecialchars((string) $area['AreaName'], ENT_QUOTES, 'UTF-8'); ?>"
                             placeholder="Enter area name"
                             data-parsley-required-message="Area name is required."
-                            data-parsley-maxlength="200"
-                            data-parsley-maxlength-message="Area name must be 200 characters or fewer."
+                            data-parsley-maxlength="30"
+                            data-parsley-maxlength-message="Area name must be 30 characters or fewer."
+                            data-parsley-whitespace="trim"
                         >
                         <?php if (isset($errors['AreaName'])): ?>
                             <div class="invalid-feedback"><?php echo htmlspecialchars($errors['AreaName'], ENT_QUOTES, 'UTF-8'); ?></div>
                         <?php endif; ?>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="is_active" class="form-label">Status</label>
-                        <select
-                            class="form-select<?php echo isset($errors['IsActive']) ? ' is-invalid' : ''; ?>"
-                            id="is_active"
-                            name="is_active"
-                            required
-                            data-parsley-required-message="Status is required."
-                        >
-                            <option value="1" <?php echo (int) $area['IsActive'] === 1 ? 'selected' : ''; ?>>Active</option>
-                            <option value="0" <?php echo (int) $area['IsActive'] === 0 ? 'selected' : ''; ?>>Inactive</option>
-                        </select>
-                        <?php if (isset($errors['IsActive'])): ?>
-                            <div class="invalid-feedback"><?php echo htmlspecialchars($errors['IsActive'], ENT_QUOTES, 'UTF-8'); ?></div>
-                        <?php endif; ?>
-                    </div>
-
                     <div class="mb-0">
-                        <button type="submit" class="btn btn-primary waves-effect waves-light me-1">
+                        <button type="submit" class="btn btn-primary waves-effect waves-light me-1" style="background-color: #002253; border-color: #002253;">
                             <?php echo $isEditMode ? 'Update' : 'Save'; ?>
                         </button>
                         <a href="areas.php" class="btn btn-secondary waves-effect">Cancel</a>
@@ -176,6 +190,16 @@ render_admin_header($pageTitle, [], 'area');
         </div>
     </div>
 </div>
+<script>
+    window.Parsley.addValidator('whitespace', {
+        validateString: function (value) {
+            return value.trim().length > 0;
+        },
+        messages: {
+            en: 'This field is required.'
+        }
+    });
+</script>
 <?php
 render_admin_footer([
     app_asset('assets/libs/parsleyjs/parsley.min.js'),

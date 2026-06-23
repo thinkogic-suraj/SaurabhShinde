@@ -23,8 +23,18 @@ render_admin_header('My Requests', [
     app_asset('assets/libs/datatables.net-bs4/css/dataTables.bootstrap4.min.css'),
     app_asset('assets/libs/datatables.net-buttons-bs4/css/buttons.bootstrap4.min.css'),
     app_asset('assets/libs/datatables.net-responsive-bs4/css/responsive.bootstrap4.min.css'),
-], 'my-requests');
+], 'my-requests', false);
 ?>
+<style>
+    #my-requests-table td, #my-requests-table th {
+        padding-top: 0.5rem !important;
+        padding-bottom: 0.5rem !important;
+    }
+    .dataTables_paginate .page-link {
+        padding: 0.25rem 0.5rem !important;
+        font-size: 0.875rem !important;
+    }
+</style>
 <div class="row">
     <div class="col-12">
         <?php if ($flash !== null): ?>
@@ -32,20 +42,34 @@ render_admin_header('My Requests', [
                 <?php echo htmlspecialchars($flash['message'], ENT_QUOTES, 'UTF-8'); ?>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
+            <script>
+                setTimeout(function() {
+                    var alertNode = document.querySelector('.alert');
+                    if (alertNode) {
+                        var alert = new bootstrap.Alert(alertNode);
+                        alert.close();
+                    }
+                }, 5000);
+            </script>
         <?php endif; ?>
 
         <div class="card">
             <div class="card-body">
-                <div class="d-flex flex-wrap align-items-center justify-content-between mb-4">
-                    <div>
-                        <h4 class="card-title mb-1">My Requests List</h4>
-                        <p class="card-title-desc mb-0">View all citizen requests and update only their status from the edit page.</p>
+                <div class="d-flex flex-wrap align-items-center justify-content-between">
+                    <div class="page-title-box">
+                        <h4 class="mb-1">My Requests</h4>
+                        <div>
+                            <ol class="breadcrumb m-0">
+                                <li class="breadcrumb-item"><a href="dashboard.php">Dashboard</a></li>
+                                <li class="breadcrumb-item active">My Requests</li>
+                            </ol>
+                        </div>
                     </div>
                 </div>
 
                 <div class="table-responsive">
                     <table id="my-requests-table" class="table table-bordered dt-responsive nowrap w-100 align-middle">
-                        <thead>
+                        <thead style="background-color: #f8f9fa;">
                             <tr>
                                 <th>Request No</th>
                                 <th>Name</th>
@@ -55,30 +79,62 @@ render_admin_header('My Requests', [
                                 <th>Area</th>
                                 <th>Status</th>
                                 <th>Raised Date</th>
-                                <th>Action</th>
+                                <th style="width: 140px;">Action</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php foreach ($requests as $request): ?>
+                                <?php
+                                $fullName = (string) ($request['Name'] ?? '');
+                                $displayName = mb_strlen($fullName) > 20 ? mb_substr($fullName, 0, 20) . '...' : $fullName;
+                                $fullRequestType = (string) ($request['RequestTypeName'] ?? '');
+                                $displayRequestType = mb_strlen($fullRequestType) > 20 ? mb_substr($fullRequestType, 0, 20) . '...' : $fullRequestType;
+                                $fullWard = (string) ($request['WardName'] ?? '');
+                                $displayWard = mb_strlen($fullWard) > 20 ? mb_substr($fullWard, 0, 20) . '...' : $fullWard;
+                                $fullArea = (string) ($request['AreaName'] ?? '');
+                                $displayArea = mb_strlen($fullArea) > 20 ? mb_substr($fullArea, 0, 20) . '...' : $fullArea;
+                                $statusName = (string) ($request['StatusName'] ?? '');
+                                $normalizedStatus = strtolower(trim($statusName));
+                                if ($normalizedStatus === '' || $normalizedStatus === 'not set') {
+                                    $badgeClass = 'bg-secondary';
+                                    $badgeStyle = '';
+                                } elseif ($normalizedStatus === 'raised') {
+                                    $badgeClass = '';
+                                    $badgeStyle = 'background-color: #F8D7DA; color: #842029;';
+                                } elseif (in_array($normalizedStatus, ['declined', 'rejected', 'decline'], true)) {
+                                    $badgeClass = 'bg-danger';
+                                    $badgeStyle = '';
+                                } elseif (in_array($normalizedStatus, ['pending', 'in progress', 'processing'], true)) {
+                                    $badgeClass = 'bg-warning';
+                                    $badgeStyle = '';
+                                } else {
+                                    $badgeClass = 'bg-success';
+                                    $badgeStyle = '';
+                                }
+                                ?>
                                 <tr>
                                     <td><?php echo htmlspecialchars($request['RequestNo'], ENT_QUOTES, 'UTF-8'); ?></td>
-                                    <td><?php echo htmlspecialchars((string) ($request['Name'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
+                                    <td title="<?php echo htmlspecialchars($fullName, ENT_QUOTES, 'UTF-8'); ?>">
+                                        <?php echo htmlspecialchars($displayName, ENT_QUOTES, 'UTF-8'); ?>
+                                    </td>
                                     <td><?php echo htmlspecialchars((string) ($request['MobileNo'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
-                                    <td><?php echo htmlspecialchars((string) ($request['RequestTypeName'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
-                                    <td><?php echo htmlspecialchars((string) ($request['WardName'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
-                                    <td><?php echo htmlspecialchars((string) ($request['AreaName'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
+                                    <td title="<?php echo htmlspecialchars($fullRequestType, ENT_QUOTES, 'UTF-8'); ?>">
+                                        <?php echo htmlspecialchars($displayRequestType, ENT_QUOTES, 'UTF-8'); ?>
+                                    </td>
+                                    <td title="<?php echo htmlspecialchars($fullWard, ENT_QUOTES, 'UTF-8'); ?>">
+                                        <?php echo htmlspecialchars($displayWard, ENT_QUOTES, 'UTF-8'); ?>
+                                    </td>
+                                    <td title="<?php echo htmlspecialchars($fullArea, ENT_QUOTES, 'UTF-8'); ?>">
+                                        <?php echo htmlspecialchars($displayArea, ENT_QUOTES, 'UTF-8'); ?>
+                                    </td>
                                     <td>
-                                        <?php
-                                        $statusName = (string) ($request['StatusName'] ?? '');
-                                        $badgeClass = $statusName === '' ? 'bg-secondary' : 'bg-success';
-                                        ?>
-                                        <span class="badge rounded-pill <?php echo $badgeClass; ?>">
+                                        <span class="badge rounded-pill <?php echo $badgeClass; ?>"<?php echo $badgeStyle !== '' ? ' style="' . htmlspecialchars($badgeStyle, ENT_QUOTES, 'UTF-8') . '"' : ''; ?>>
                                             <?php echo htmlspecialchars($statusName !== '' ? $statusName : 'Not Set', ENT_QUOTES, 'UTF-8'); ?>
                                         </span>
                                     </td>
                                     <td><?php echo htmlspecialchars((string) ($request['RaisedDate'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
                                     <td>
-                                        <a href="my-request-form.php?id=<?php echo (int) $request['CitizenRequestId']; ?>" class="btn btn-sm btn-outline-primary">
+                                        <a href="my-request-form.php?id=<?php echo (int) $request['CitizenRequestId']; ?>" class="btn btn-sm" style="background-color: #002253; border-color: #002253; color: white;">
                                             <i class="ri-edit-2-line align-middle me-1"></i> Edit
                                         </a>
                                     </td>
@@ -93,11 +149,14 @@ render_admin_header('My Requests', [
 </div>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        $('#my-requests-table').DataTable({
+        const myRequestsTable = $('#my-requests-table').DataTable({
             responsive: true,
             pageLength: 10,
+            lengthChange: false,
             order: [[7, 'desc']]
         });
+
+        $('.dataTables_filter').css('text-align', 'left').appendTo($('#my-requests-table_wrapper .row:first-child > div:first-child'));
     });
 </script>
 <?php

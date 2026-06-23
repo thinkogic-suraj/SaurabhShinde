@@ -5,8 +5,31 @@ require __DIR__ . '/includes/layout.php';
 
 require_admin_login();
 
-$flash = get_flash_message();
 $pdo = app_pdo();
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete') {
+    $areaIdToDelete = (int) ($_POST['area_id'] ?? 0);
+
+    if ($areaIdToDelete > 0) {
+        try {
+            $deleteStmt = $pdo->prepare('UPDATE Area SET IsActive = 0 WHERE AreaId = :area_id');
+            $deleteStmt->execute(['area_id' => $areaIdToDelete]);
+
+            if ($deleteStmt->rowCount() > 0) {
+                set_flash_message('success', 'Area deactivated successfully.');
+            } else {
+                set_flash_message('danger', 'Selected area record was not found.');
+            }
+        } catch (PDOException $e) {
+            set_flash_message('danger', 'Area could not be deleted because it is linked to other records.');
+        }
+    }
+
+    header('Location: areas.php');
+    exit;
+}
+
+$flash = get_flash_message();
 $areas = $pdo->query(
     'SELECT a.AreaId, a.AreaName, a.IsActive, w.WardName
      FROM Area a
@@ -18,8 +41,18 @@ render_admin_header('Area Master', [
     app_asset('assets/libs/datatables.net-bs4/css/dataTables.bootstrap4.min.css'),
     app_asset('assets/libs/datatables.net-buttons-bs4/css/buttons.bootstrap4.min.css'),
     app_asset('assets/libs/datatables.net-responsive-bs4/css/responsive.bootstrap4.min.css'),
-], 'area');
+], 'area', false);
 ?>
+<style>
+    #area-table td, #area-table th {
+        padding-top: 0.5rem !important;
+        padding-bottom: 0.5rem !important;
+    }
+    .dataTables_paginate .page-link {
+        padding: 0.25rem 0.5rem !important;
+        font-size: 0.875rem !important;
+    }
+</style>
 <div class="row">
     <div class="col-12">
         <?php if ($flash !== null): ?>
@@ -27,37 +60,59 @@ render_admin_header('Area Master', [
                 <?php echo htmlspecialchars($flash['message'], ENT_QUOTES, 'UTF-8'); ?>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
+            <script>
+                setTimeout(function() {
+                    var alertNode = document.querySelector('.alert');
+                    if (alertNode) {
+                        var alert = new bootstrap.Alert(alertNode);
+                        alert.close();
+                    }
+                }, 5000);
+            </script>
         <?php endif; ?>
 
         <div class="card">
             <div class="card-body">
-                <div class="d-flex flex-wrap align-items-center justify-content-between mb-4">
-                    <div>
-                        <h4 class="card-title mb-1">Area List</h4>
-                        <p class="card-title-desc mb-0">Manage Area master records with search, sorting, pagination, and edit actions.</p>
+                <div class="d-flex flex-wrap align-items-center justify-content-between">
+                    <div class="page-title-box">
+                        <h4 class="mb-1">Area Master</h4>
+                        <div>
+                            <ol class="breadcrumb m-0">
+                                <li class="breadcrumb-item"><a href="dashboard.php">Dashboard</a></li>
+                                <li class="breadcrumb-item active">Area Master</li>
+                            </ol>
+                        </div>
                     </div>
-                    <a href="area-form.php" class="btn btn-primary waves-effect waves-light">
+                    <a href="area-form.php" class="btn btn-primary waves-effect waves-light" style="background-color: #002253; border-color: #002253;">
                         <i class="ri-add-line align-middle me-1"></i> Add New Area
                     </a>
                 </div>
 
                 <div class="table-responsive">
                     <table id="area-table" class="table table-bordered dt-responsive nowrap w-100 align-middle">
-                        <thead>
+                        <thead style="background-color: #f8f9fa;">
                             <tr>
                                 <th>Area ID</th>
                                 <th>Ward Name</th>
                                 <th>Area Name</th>
                                 <th>Status</th>
-                                <th>Action</th>
+                                <th style="width: 140px;">Action</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php foreach ($areas as $area): ?>
+                                <?php
+                                $fullAreaName = (string) $area['AreaName'];
+                                $displayAreaName = mb_strlen($fullAreaName) > 20
+                                    ? mb_substr($fullAreaName, 0, 20) . '...'
+                                    : $fullAreaName;
+                                ?>
                                 <tr>
                                     <td><?php echo (int) $area['AreaId']; ?></td>
                                     <td><?php echo htmlspecialchars($area['WardName'], ENT_QUOTES, 'UTF-8'); ?></td>
-                                    <td><?php echo htmlspecialchars($area['AreaName'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                    <td title="<?php echo htmlspecialchars($fullAreaName, ENT_QUOTES, 'UTF-8'); ?>">
+                                        <?php echo htmlspecialchars($displayAreaName, ENT_QUOTES, 'UTF-8'); ?>
+                                    </td>
                                     <td>
                                         <?php if ((int) $area['IsActive'] === 1): ?>
                                             <span class="badge rounded-pill bg-success">Active</span>
@@ -66,9 +121,18 @@ render_admin_header('Area Master', [
                                         <?php endif; ?>
                                     </td>
                                     <td>
-                                        <a href="area-form.php?id=<?php echo (int) $area['AreaId']; ?>" class="btn btn-sm btn-outline-primary">
-                                            <i class="ri-edit-2-line align-middle me-1"></i> Edit
-                                        </a>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <a href="area-form.php?id=<?php echo (int) $area['AreaId']; ?>" class="btn btn-sm" style="background-color: #002253; border-color: #002253; color: white;">
+                                                <i class="ri-edit-2-line align-middle me-1"></i> Edit
+                                            </a>
+                                            <form method="POST" action="" class="m-0 delete-area-form">
+                                                <input type="hidden" name="action" value="delete">
+                                                <input type="hidden" name="area_id" value="<?php echo (int) $area['AreaId']; ?>">
+                                                <button type="submit" class="btn btn-sm" style="background-color: #dc3545; border-color: #dc3545; color: white;">
+                                                    <i class="ri-delete-bin-line align-middle me-1"></i> Delete
+                                                </button>
+                                            </form>
+                                        </div>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -81,10 +145,21 @@ render_admin_header('Area Master', [
 </div>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        $('#area-table').DataTable({
+        const areaTable = $('#area-table').DataTable({
             responsive: true,
             pageLength: 10,
+            lengthChange: false,
             order: [[0, 'desc']]
+        });
+
+        $('.dataTables_filter').css('text-align', 'left').appendTo($('#area-table_wrapper .row:first-child > div:first-child'));
+
+        document.querySelectorAll('.delete-area-form').forEach(function (form) {
+            form.addEventListener('submit', function (event) {
+                if (!window.confirm('Are you sure you want to delete this area?')) {
+                    event.preventDefault();
+                }
+            });
         });
     });
 </script>

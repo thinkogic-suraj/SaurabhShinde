@@ -55,19 +55,24 @@ $attachments = $attachmentsStmt->fetchAll();
 $errors = [];
 $selectedStatusId = (int) $request['RequestStatusId'];
 $declinedStatusId = null;
+$dropdownStatusOptions = [];
 
 foreach ($statusOptions as $statusOption) {
     $statusName = strtolower(trim((string) $statusOption['StatusName']));
     if (in_array($statusName, ['declined', 'rejected', 'decline'], true)) {
         $declinedStatusId = (int) $statusOption['RequestStatusId'];
-        break;
+        continue;
+    }
+
+    if (in_array($statusName, ['in progress', 'completed', 'complete'], true)) {
+        $dropdownStatusOptions[] = $statusOption;
     }
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['form_action'] ?? 'save';
     $selectedStatusId = (int) ($_POST['request_status_id'] ?? 0);
-    $validStatusIds = array_map(static fn(array $row): int => (int) $row['RequestStatusId'], $statusOptions);
+    $validStatusIds = array_map(static fn(array $row): int => (int) $row['RequestStatusId'], $dropdownStatusOptions);
 
     if ($action === 'decline') {
         if ($declinedStatusId === null) {
@@ -98,56 +103,86 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-render_admin_header('Edit My Request', [], 'my-requests');
+render_admin_header('Edit My Request', [], 'my-requests', false);
 ?>
-<div class="row justify-content-center">
-    <div class="col-xl-5 col-lg-7">
+<style>
+    .form-select {
+        display: block;
+        width: 30% !important;
+    }
+    .page-title-box {
+        padding-bottom: 0 !important;
+    }
+    .request-detail-value {
+        font-weight: 600;
+        padding: 0.625rem 0.75rem;
+        border: 1px solid #e9ecef;
+        border-radius: 0.375rem;
+        background-color: #f8f9fa;
+        min-height: calc(1.5em + 1.25rem + 2px);
+    }
+</style>
+<div class="row">
+    <div class="col-12">
         <div class="card">
             <div class="card-body">
-                <form method="POST" action="" novalidate>
+                <div class="d-flex flex-wrap align-items-center justify-content-between mb-4">
+                    <div class="page-title-box">
+                        <h4 class="mb-1">Edit My Request</h4>
+                        <div>
+                            <ol class="breadcrumb m-0">
+                                <li class="breadcrumb-item"><a href="dashboard.php">Dashboard</a></li>
+                                <li class="breadcrumb-item"><a href="my-requests.php">My Requests</a></li>
+                                <li class="breadcrumb-item active">Edit My Request</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+
+                <form class="custom-validation" method="POST" action="" novalidate>
                     <input type="hidden" name="form_action" id="form_action" value="save">
 
                     <div class="row">
                         <div class="col-6 mb-3">
                             <label class="form-label text-muted mb-1">Request Type</label>
-                            <div class="fw-semibold"><?php echo htmlspecialchars((string) ($request['RequestTypeName'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></div>
+                            <div class="request-detail-value"><?php echo htmlspecialchars((string) ($request['RequestTypeName'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></div>
                         </div>
                         <div class="col-6 mb-3">
                             <label class="form-label text-muted mb-1">Name</label>
-                            <div class="fw-semibold"><?php echo htmlspecialchars((string) ($request['Name'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></div>
+                            <div class="request-detail-value"><?php echo htmlspecialchars((string) ($request['Name'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></div>
                         </div>
                     </div>
 
                     <div class="row">
                         <div class="col-6 mb-3">
                             <label class="form-label text-muted mb-1">Mobile Number</label>
-                            <div class="fw-semibold"><?php echo htmlspecialchars((string) ($request['MobileNo'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></div>
+                            <div class="request-detail-value"><?php echo htmlspecialchars((string) ($request['MobileNo'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></div>
                         </div>
                         <div class="col-6 mb-3">
                             <label class="form-label text-muted mb-1">Aadhaar Number</label>
-                            <div class="fw-semibold"><?php echo htmlspecialchars((string) ($request['AadhaarNo'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></div>
+                            <div class="request-detail-value"><?php echo htmlspecialchars((string) ($request['AadhaarNo'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></div>
                         </div>
                     </div>
 
                     <div class="row">
                         <div class="col-6 mb-3">
                             <label class="form-label text-muted mb-1">Ward</label>
-                            <div class="fw-semibold"><?php echo htmlspecialchars((string) ($request['WardName'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></div>
+                            <div class="request-detail-value"><?php echo htmlspecialchars((string) ($request['WardName'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></div>
                         </div>
                         <div class="col-6 mb-3">
                             <label class="form-label text-muted mb-1">Area</label>
-                            <div class="fw-semibold"><?php echo htmlspecialchars((string) ($request['AreaName'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></div>
+                            <div class="request-detail-value"><?php echo htmlspecialchars((string) ($request['AreaName'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></div>
                         </div>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label text-muted mb-1">Address</label>
-                        <div class="fw-semibold"><?php echo nl2br(htmlspecialchars((string) ($request['Address'] ?? ''), ENT_QUOTES, 'UTF-8')); ?></div>
+                        <div class="request-detail-value"><?php echo nl2br(htmlspecialchars((string) ($request['Address'] ?? ''), ENT_QUOTES, 'UTF-8')); ?></div>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label text-muted mb-1">Description</label>
-                        <div class="fw-semibold"><?php echo nl2br(htmlspecialchars((string) ($request['Description'] ?? ''), ENT_QUOTES, 'UTF-8')); ?></div>
+                        <div class="request-detail-value"><?php echo nl2br(htmlspecialchars((string) ($request['Description'] ?? ''), ENT_QUOTES, 'UTF-8')); ?></div>
                     </div>
 
                     <div class="mb-3">
@@ -174,9 +209,10 @@ render_admin_header('Edit My Request', [], 'my-requests');
                             id="request_status_id"
                             name="request_status_id"
                             required
+                            data-parsley-required-message="Status is required."
                         >
                             <option value="">Select Status</option>
-                            <?php foreach ($statusOptions as $statusOption): ?>
+                            <?php foreach ($dropdownStatusOptions as $statusOption): ?>
                                 <option
                                     value="<?php echo (int) $statusOption['RequestStatusId']; ?>"
                                     <?php echo $selectedStatusId === (int) $statusOption['RequestStatusId'] ? 'selected' : ''; ?>
@@ -187,15 +223,15 @@ render_admin_header('Edit My Request', [], 'my-requests');
                         </select>
                         <?php if (isset($errors['request_status_id'])): ?>
                             <div class="invalid-feedback"><?php echo htmlspecialchars($errors['request_status_id'], ENT_QUOTES, 'UTF-8'); ?></div>
-                        <?php elseif ($statusOptions === []): ?>
-                            <div class="form-text text-danger">No active statuses are configured in RequestStatusMaster.</div>
+                        <?php elseif ($dropdownStatusOptions === []): ?>
+                            <div class="form-text text-danger">Only In Progress and Completed statuses should be active in RequestStatusMaster.</div>
                         <?php endif; ?>
                     </div>
 
-                    <div class="d-flex justify-content-between align-items-center gap-3">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
                         <button
                             type="submit"
-                            class="btn btn-outline-danger px-4"
+                            class="btn btn-danger waves-effect waves-light"
                             <?php echo $declinedStatusId === null ? 'disabled' : ''; ?>
                             onclick="document.getElementById('form_action').value='decline';"
                         >
@@ -203,12 +239,14 @@ render_admin_header('Edit My Request', [], 'my-requests');
                         </button>
                         <button
                             type="submit"
-                            class="btn btn-primary px-5"
-                            <?php echo $statusOptions === [] ? 'disabled' : ''; ?>
+                            class="btn btn-primary waves-effect waves-light"
+                            style="background-color: #002253; border-color: #002253;"
+                            <?php echo $dropdownStatusOptions === [] ? 'disabled' : ''; ?>
                             onclick="document.getElementById('form_action').value='save';"
                         >
                             Save
                         </button>
+                        <a href="my-requests.php" class="btn btn-secondary waves-effect">Cancel</a>
                     </div>
                 </form>
             </div>
@@ -216,4 +254,7 @@ render_admin_header('Edit My Request', [], 'my-requests');
     </div>
 </div>
 <?php
-render_admin_footer();
+render_admin_footer([
+    app_asset('assets/libs/parsleyjs/parsley.min.js'),
+    app_asset('assets/js/pages/form-validation.init.js'),
+]);

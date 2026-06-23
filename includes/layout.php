@@ -26,6 +26,9 @@ function render_admin_header(string $title, array $extraCss = [], string $active
     <title><?php echo htmlspecialchars($title, ENT_QUOTES, 'UTF-8'); ?> | Saurabh Shinde Foundation</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="shortcut icon" href="<?php echo app_asset('assets/images/favicon.ico'); ?>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="<?php echo app_asset('assets/css/bootstrap.min.css'); ?>" id="bootstrap-style" rel="stylesheet" type="text/css">
     <link href="<?php echo app_asset('assets/css/icons.min.css'); ?>" rel="stylesheet" type="text/css">
     <link href="<?php echo app_asset('assets/css/app.min.css'); ?>" id="app-style" rel="stylesheet" type="text/css">
@@ -33,8 +36,86 @@ function render_admin_header(string $title, array $extraCss = [], string $active
     <link href="<?php echo htmlspecialchars($css, ENT_QUOTES, 'UTF-8'); ?>" rel="stylesheet" type="text/css">
 <?php endforeach; ?>
     <style>
-        body, .page-content, #layout-wrapper {
+        body,
+        .page-content,
+        #layout-wrapper {
             background-color: #fff !important;
+        }
+        body,
+        button,
+        input,
+        select,
+        textarea,
+        .btn,
+        .form-control,
+        .form-select,
+        .page-title-box,
+        .navbar-brand-box,
+        .vertical-menu,
+        .card,
+        .table,
+        .breadcrumb,
+        .alert,
+        .badge {
+            font-family: 'Josefin Sans', sans-serif !important;
+        }
+        .badge.bg-success,
+        .badge.rounded-pill.bg-success {
+            background-color: #16A34A !important;
+        }
+        .badge.rounded-pill {
+            border-radius: 0.375rem !important;
+            padding: 0.45em 0.7em !important;
+            line-height: 1.1 !important;
+        }
+        .page-title-box h4 {
+            font-size: 23px !important;
+        }
+        .breadcrumb,
+        .breadcrumb-item,
+        .breadcrumb-item a {
+            font-size: 13px !important;
+        }
+        .navbar-brand-box .logo {
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+        }
+        .navbar-brand-box .logo-sm,
+        .navbar-brand-box .logo-lg {
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+        }
+        .navbar-brand-box .logo-sm {
+            display: none;
+        }
+        .navbar-brand-box .logo-lg {
+            display: flex;
+        }
+        .vertical-collpsed .navbar-brand-box .logo-sm {
+            display: flex;
+        }
+        .vertical-collpsed .navbar-brand-box .logo-lg {
+            display: none;
+        }
+        .navbar-brand-box .logo-sm .header-logo-image {
+            max-width: 34px;
+            max-height: 34px;
+            width: auto;
+            height: auto;
+            display: block;
+            margin: 0 auto;
+            object-fit: contain;
+        }
+        .navbar-brand-box .logo-lg .header-logo-image {
+            max-width: 165px;
+            max-height: 60px;
+            width: auto;
+            height: auto;
+            display: block;
+            margin: 0 auto;
+            object-fit: contain;
         }
     </style>
 </head>
@@ -44,18 +125,13 @@ function render_admin_header(string $title, array $extraCss = [], string $active
             <div class="navbar-header">
                 <div class="d-flex">
                     <div class="navbar-brand-box">
-                        <a href="dashboard.php" class="logo logo-dark">
-                            <span class="logo-sm">
-                                <span class="avatar-title rounded-circle bg-primary text-white fw-bold">S</span>
-                            </span>
-                            <span class="logo-lg text-dark fw-bold">SSF Admin</span>
-                        </a>
-
                         <a href="dashboard.php" class="logo logo-light">
                             <span class="logo-sm">
-                                <span class="avatar-title rounded-circle bg-primary text-white fw-bold">S</span>
+                                <img src="<?php echo app_asset('assets/images/sidebar-logo-collapsed.svg'); ?>" alt="Saurabh Shinde Foundation Logo" class="header-logo-image">
                             </span>
-                            <span class="logo-lg text-white fw-bold">SSF Admin</span>
+                            <span class="logo-lg">
+                                <img src="<?php echo app_asset('assets/images/sidebar-logo-expanded.svg'); ?>" alt="Saurabh Shinde Foundation Logo" class="header-logo-image">
+                            </span>
                         </a>
                     </div>
 
