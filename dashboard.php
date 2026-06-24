@@ -1,13 +1,64 @@
 <?php
 require __DIR__ . '/includes/auth.php';
+require __DIR__ . '/includes/db.php';
 require __DIR__ . '/includes/layout.php';
 
 require_admin_login();
 
 $flash = get_flash_message();
+$totalRequests = 0;
+$closedRequests = 0;
+$openRequests = 0;
+$inProgressRequests = 0;
+$declinedRequests = 0;
+
+try {
+    $pdo = app_pdo();
+    $totalRequests = (int) $pdo->query('SELECT COUNT(*) FROM CitizenRequest')->fetchColumn();
+    $closedRequestsStmt = $pdo->query(
+        "SELECT COUNT(*)
+         FROM CitizenRequest cr
+         INNER JOIN RequestStatusMaster rsm ON rsm.RequestStatusId = cr.RequestStatusId
+         WHERE TRIM(LOWER(rsm.StatusName)) = 'completed'"
+    );
+    $closedRequests = (int) $closedRequestsStmt->fetchColumn();
+    $openRequestsStmt = $pdo->query(
+        "SELECT COUNT(*)
+         FROM CitizenRequest cr
+         INNER JOIN RequestStatusMaster rsm ON rsm.RequestStatusId = cr.RequestStatusId
+         WHERE TRIM(LOWER(rsm.StatusName)) = 'raised'"
+    );
+    $openRequests = (int) $openRequestsStmt->fetchColumn();
+    $inProgressRequestsStmt = $pdo->query(
+        "SELECT COUNT(*)
+         FROM CitizenRequest cr
+         INNER JOIN RequestStatusMaster rsm ON rsm.RequestStatusId = cr.RequestStatusId
+         WHERE TRIM(LOWER(rsm.StatusName)) = 'in progress'"
+    );
+    $inProgressRequests = (int) $inProgressRequestsStmt->fetchColumn();
+    $declinedRequestsStmt = $pdo->query(
+        "SELECT COUNT(*)
+         FROM CitizenRequest cr
+         INNER JOIN RequestStatusMaster rsm ON rsm.RequestStatusId = cr.RequestStatusId
+         WHERE TRIM(LOWER(rsm.StatusName)) = 'declined'"
+    );
+    $declinedRequests = (int) $declinedRequestsStmt->fetchColumn();
+} catch (Throwable $e) {
+    $totalRequests = 0;
+    $closedRequests = 0;
+    $openRequests = 0;
+    $inProgressRequests = 0;
+    $declinedRequests = 0;
+}
 
 render_admin_header('Dashboard', [], 'dashboard');
 ?>
+<style>
+    .page-title-box {
+        padding-bottom: 0 !important;
+    }
+</style>
+
 <div class="row">
     <div class="col-12">
         <?php if ($flash !== null): ?>
@@ -19,98 +70,78 @@ render_admin_header('Dashboard', [], 'dashboard');
     </div>
 </div>
 <div class="row">
-    <div class="col-xl-4 col-md-6">
-        <div class="card">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="avatar-sm me-3">
-                        <span class="avatar-title rounded-circle bg-primary-subtle text-primary font-size-24">
-                            <i class="ri-map-pin-2-line"></i>
-                        </span>
-                    </div>
-                    <div class="flex-grow-1">
-                        <h5 class="mb-1">Ward Module</h5>
-                        <p class="text-muted mb-3">Add, edit, and manage Ward master records.</p>
-                        <a href="wards.php" class="btn btn-primary btn-sm">Open Ward Master</a>
-                    </div>
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card" style="background-color: #2b5ab4; border: none; border-radius: 0.25rem;">
+            <div class="card-body position-relative p-4">
+                <h3 class="text-white fw-bold mb-1" style="font-size: 38px; position: relative; z-index: 2;"><?php echo number_format($totalRequests); ?></h3>
+                <p class="text-white mb-0" style="font-size: 15px; position: relative; z-index: 2;">Total Requests</p>
+                <div class="position-absolute" style="top: 15px; right: 20px; z-index: 1;">
+                    <i class="ri-file-list-3-line text-white" style="font-size: 70px; opacity: 0.4;"></i>
                 </div>
             </div>
+            <a href="my-requests.php" class="d-block text-center text-white py-1" style="background-color: rgba(0,0,0,0.1); text-decoration: none; font-size: 13px;">
+                More info <i class="mdi mdi-arrow-right-circle ms-1"></i>
+            </a>
         </div>
     </div>
 
-    <div class="col-xl-4 col-md-6">
-        <div class="card">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="avatar-sm me-3">
-                        <span class="avatar-title rounded-circle bg-primary-subtle text-primary font-size-24">
-                            <i class="ri-road-map-line"></i>
-                        </span>
-                    </div>
-                    <div class="flex-grow-1">
-                        <h5 class="mb-1">Area Module</h5>
-                        <p class="text-muted mb-3">Add, edit, and manage Area master records.</p>
-                        <a href="areas.php" class="btn btn-primary btn-sm">Open Area Master</a>
-                    </div>
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card" style="background-color: #16A34A; border: none; border-radius: 0.25rem;">
+            <div class="card-body position-relative p-4">
+                <h3 class="text-white fw-bold mb-1" style="font-size: 38px; position: relative; z-index: 2;"><?php echo number_format($closedRequests); ?></h3>
+                <p class="text-white mb-0" style="font-size: 15px; position: relative; z-index: 2;">Closed Requests</p>
+                <div class="position-absolute" style="top: 15px; right: 20px; z-index: 1;">
+                    <i class="ri-checkbox-circle-line text-white" style="font-size: 70px; opacity: 0.4;"></i>
                 </div>
             </div>
+            <a href="my-requests.php" class="d-block text-center text-white py-1" style="background-color: rgba(0,0,0,0.1); text-decoration: none; font-size: 13px;">
+                More info <i class="mdi mdi-arrow-right-circle ms-1"></i>
+            </a>
         </div>
     </div>
 
-    <div class="col-xl-4 col-md-6">
-        <div class="card">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="avatar-sm me-3">
-                        <span class="avatar-title rounded-circle bg-primary-subtle text-primary font-size-24">
-                            <i class="ri-user-star-line"></i>
-                        </span>
-                    </div>
-                    <div class="flex-grow-1">
-                        <h5 class="mb-1">Age Category Module</h5>
-                        <p class="text-muted mb-3">Add, edit, and manage Age Category records.</p>
-                        <a href="age-categories.php" class="btn btn-primary btn-sm">Open Age Category</a>
-                    </div>
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card" style="background-color: #9242E3; border: none; border-radius: 0.25rem;">
+            <div class="card-body position-relative p-4">
+                <h3 class="text-white fw-bold mb-1" style="font-size: 38px; position: relative; z-index: 2;"><?php echo number_format($openRequests); ?></h3>
+                <p class="text-white mb-0" style="font-size: 15px; position: relative; z-index: 2;">Open Requests</p>
+                <div class="position-absolute" style="top: 15px; right: 20px; z-index: 1;">
+                    <i class="ri-folder-open-line text-white" style="font-size: 70px; opacity: 0.4;"></i>
                 </div>
             </div>
+            <a href="my-requests.php" class="d-block text-center text-white py-1" style="background-color: rgba(0,0,0,0.1); text-decoration: none; font-size: 13px;">
+                More info <i class="mdi mdi-arrow-right-circle ms-1"></i>
+            </a>
         </div>
     </div>
 
-    <div class="col-xl-4 col-md-6">
-        <div class="card">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="avatar-sm me-3">
-                        <span class="avatar-title rounded-circle bg-primary-subtle text-primary font-size-24">
-                            <i class="ri-file-list-3-line"></i>
-                        </span>
-                    </div>
-                    <div class="flex-grow-1">
-                        <h5 class="mb-1">Request Type Module</h5>
-                        <p class="text-muted mb-3">Add, edit, and manage Request Type records.</p>
-                        <a href="request-types.php" class="btn btn-primary btn-sm">Open Request Type</a>
-                    </div>
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card" style="background-color: #e0a800; border: none; border-radius: 0.25rem;">
+            <div class="card-body position-relative p-4">
+                <h3 class="text-white fw-bold mb-1" style="font-size: 38px; position: relative; z-index: 2;"><?php echo number_format($inProgressRequests); ?></h3>
+                <p class="text-white mb-0" style="font-size: 15px; position: relative; z-index: 2;">In progress Requests</p>
+                <div class="position-absolute" style="top: 15px; right: 20px; z-index: 1;">
+                    <i class="ri-loader-4-line text-white" style="font-size: 70px; opacity: 0.4;"></i>
                 </div>
             </div>
+            <a href="my-requests.php" class="d-block text-center text-white py-1" style="background-color: rgba(0,0,0,0.1); text-decoration: none; font-size: 13px;">
+                More info <i class="mdi mdi-arrow-right-circle ms-1"></i>
+            </a>
         </div>
     </div>
 
-    <div class="col-xl-4 col-md-6">
-        <div class="card">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="avatar-sm me-3">
-                        <span class="avatar-title rounded-circle bg-primary-subtle text-primary font-size-24">
-                            <i class="ri-inbox-archive-line"></i>
-                        </span>
-                    </div>
-                    <div class="flex-grow-1">
-                        <h5 class="mb-1">My Requests Module</h5>
-                        <p class="text-muted mb-3">Review citizen requests and update only their status.</p>
-                        <a href="my-requests.php" class="btn btn-primary btn-sm">Open My Requests</a>
-                    </div>
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card" style="background-color: #E24949; border: none; border-radius: 0.25rem;">
+            <div class="card-body position-relative p-4">
+                <h3 class="text-white fw-bold mb-1" style="font-size: 38px; position: relative; z-index: 2;"><?php echo number_format($declinedRequests); ?></h3>
+                <p class="text-white mb-0" style="font-size: 15px; position: relative; z-index: 2;">Declined Requests</p>
+                <div class="position-absolute" style="top: 15px; right: 20px; z-index: 1;">
+                    <i class="ri-close-circle-line text-white" style="font-size: 70px; opacity: 0.4;"></i>
                 </div>
             </div>
+            <a href="my-requests.php" class="d-block text-center text-white py-1" style="background-color: rgba(0,0,0,0.1); text-decoration: none; font-size: 13px;">
+                More info <i class="mdi mdi-arrow-right-circle ms-1"></i>
+            </a>
         </div>
     </div>
 </div>

@@ -183,6 +183,14 @@ function render_admin_header(string $title, array $extraCss = [], string $active
                     <button type="button" class="btn btn-sm px-3 font-size-24 header-item waves-effect" id="vertical-menu-btn">
                         <i class="ri-menu-2-line align-middle"></i>
                     </button>
+
+                    <!-- App Search-->
+                    <form class="app-search d-none d-lg-block">
+                        <div class="position-relative">
+                            <input type="text" class="form-control" placeholder="Search...">
+                            <span class="ri-search-line"></span>
+                        </div>
+                    </form>
                 </div>
 
                 <div class="d-flex">
@@ -313,6 +321,13 @@ function render_admin_footer(array $extraJs = []): void
     <script src="<?php echo app_asset('assets/js/app.js'); ?>"></script>
     <script>
         $(document).ready(function() {
+            $('.app-search input').on('keyup', function() {
+                var value = $(this).val().toLowerCase();
+                $('#side-menu li:not(.menu-title)').filter(function() {
+                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
+                });
+            });
+
             setTimeout(function() {
                 $('.alert').alert('close');
             }, 1000);

@@ -163,8 +163,8 @@ render_admin_header('My Requests', [
                                     $badgeClass = '';
                                     $badgeStyle = 'background-color: #F8D7DA; color: #842029;';
                                 } elseif (in_array($normalizedStatus, ['declined', 'rejected', 'decline'], true)) {
-                                    $badgeClass = 'bg-danger';
-                                    $badgeStyle = '';
+                                    $badgeClass = 'text-white';
+                                    $badgeStyle = 'background-color: #E24949;';
                                 } elseif (in_array($normalizedStatus, ['pending', 'in progress', 'processing'], true)) {
                                     $badgeClass = 'bg-warning';
                                     $badgeStyle = '';
