@@ -4,8 +4,20 @@ require __DIR__ . '/includes/layout.php';
 
 require_admin_login();
 
+$flash = get_flash_message();
+
 render_admin_header('Dashboard', [], 'dashboard');
 ?>
+<div class="row">
+    <div class="col-12">
+        <?php if ($flash !== null): ?>
+            <div class="alert alert-<?php echo htmlspecialchars($flash['type'], ENT_QUOTES, 'UTF-8'); ?> alert-dismissible fade show" role="alert">
+                <?php echo htmlspecialchars($flash['message'], ENT_QUOTES, 'UTF-8'); ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        <?php endif; ?>
+    </div>
+</div>
 <div class="row">
     <div class="col-xl-4 col-md-6">
         <div class="card">

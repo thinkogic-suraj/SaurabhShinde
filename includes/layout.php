@@ -18,6 +18,24 @@ function is_link_active(string $menuKey, string $activeMenu): string
 function render_admin_header(string $title, array $extraCss = [], string $activeMenu = 'dashboard', bool $showPageTitle = true): void
 {
     $mobile = $_SESSION['admin_mobile'] ?? 'Admin';
+    $profileName = $_SESSION['admin_name'] ?? 'Admin';
+
+    if (function_exists('app_pdo') && !empty($_SESSION['admin_id'])) {
+        try {
+            $profileStmt = app_pdo()->prepare('SELECT UserName, MobileNo FROM Employee WHERE EmployeeId = :employee_id LIMIT 1');
+            $profileStmt->execute(['employee_id' => (int) $_SESSION['admin_id']]);
+            $profileData = $profileStmt->fetch();
+
+            if ($profileData) {
+                $profileName = (string) ($profileData['UserName'] ?? $profileName);
+                $mobile = (string) ($profileData['MobileNo'] ?? $mobile);
+                $_SESSION['admin_name'] = $profileName;
+                $_SESSION['admin_mobile'] = $mobile;
+            }
+        } catch (Throwable $e) {
+            // Fall back to current session values.
+        }
+    }
     ?>
 <!doctype html>
 <html lang="en">
@@ -133,6 +151,17 @@ function render_admin_header(string $title, array $extraCss = [], string $active
         .page-link {
             color: #002253;
         }
+        .profile-menu {
+            min-width: 190px;
+            border-radius: 0.5rem;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+            padding: 0.5rem 0;
+        }
+        .profile-menu .dropdown-item {
+            font-size: 14px;
+            padding: 0.6rem 1rem;
+        }
     </style>
 </head>
 <body data-sidebar="dark" data-keep-enlarged="true" class="vertical-collpsed">
@@ -158,15 +187,16 @@ function render_admin_header(string $title, array $extraCss = [], string $active
 
                 <div class="d-flex">
                     <div class="dropdown d-inline-block user-dropdown">
-                        <button type="button" class="btn header-item waves-effect" id="page-header-user-dropdown"
+                        <button type="button" class="btn header-item waves-effect d-flex align-items-center" id="page-header-user-dropdown"
                             data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                            <img class="rounded-circle header-profile-user" src="<?php echo app_asset('assets/images/users/avatar-2.jpg'); ?>"
-                                alt="Header Avatar">
-                            <span class="d-none d-xl-inline-block ms-1"><?php echo htmlspecialchars($mobile, ENT_QUOTES, 'UTF-8'); ?></span>
+                            <div class="rounded-circle header-profile-user d-flex align-items-center justify-content-center text-white" style="background-color: #002253; font-weight: bold;">
+                                <?php echo htmlspecialchars(strtoupper(substr($profileName, 0, 1)), ENT_QUOTES, 'UTF-8'); ?>
+                            </div>
+                            <span class="d-none d-xl-inline-block ms-2"><?php echo htmlspecialchars($profileName, ENT_QUOTES, 'UTF-8'); ?></span>
                             <i class="mdi mdi-chevron-down d-none d-xl-inline-block"></i>
                         </button>
-                        <div class="dropdown-menu dropdown-menu-end">
-                            <a class="dropdown-item" href="#"><i class="ri-user-line align-middle me-1"></i> Profile</a>
+                        <div class="dropdown-menu dropdown-menu-end profile-menu">
+                            <a class="dropdown-item" href="my-profile.php"><i class="ri-user-line align-middle me-1"></i> Profile</a>
                             <div class="dropdown-divider"></div>
                             <a class="dropdown-item text-danger" href="logout.php"><i class="ri-shut-down-line align-middle me-1 text-danger"></i> Logout</a>
                         </div>
@@ -281,6 +311,13 @@ function render_admin_footer(array $extraJs = []): void
     <script src="<?php echo htmlspecialchars($js, ENT_QUOTES, 'UTF-8'); ?>"></script>
 <?php endforeach; ?>
     <script src="<?php echo app_asset('assets/js/app.js'); ?>"></script>
+    <script>
+        $(document).ready(function() {
+            setTimeout(function() {
+                $('.alert').alert('close');
+            }, 1000);
+        });
+    </script>
 </body>
 </html>
 <?php
