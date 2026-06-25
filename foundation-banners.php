@@ -12,14 +12,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delet
 
     if ($bannerIdToDelete > 0) {
         $deleteStmt = $pdo->prepare(
-            'UPDATE FoundationBanner
-             SET IsActive = 0
+            'DELETE FROM FoundationBanner
              WHERE FoundatationBannerId = :banner_id'
         );
         $deleteStmt->execute(['banner_id' => $bannerIdToDelete]);
 
         if ($deleteStmt->rowCount() > 0) {
-            set_flash_message('success', 'Foundation banner deactivated successfully.');
+            set_flash_message('success', 'Foundation banner deleted successfully.');
         } else {
             set_flash_message('danger', 'Selected foundation banner record was not found.');
         }
@@ -33,7 +32,6 @@ $flash = get_flash_message();
 $banners = $pdo->query(
     'SELECT FoundatationBannerId, BannerTitle, BannerDescription, BannerImage, IsActive, CreatedDate
      FROM FoundationBanner
-     WHERE IsActive = 1
      ORDER BY FoundatationBannerId DESC'
 )->fetchAll();
 
