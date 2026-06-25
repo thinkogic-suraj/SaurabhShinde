@@ -232,6 +232,13 @@ function render_admin_header(string $title, array $extraCss = [], string $active
                             </a>
                         </li>
 
+                        <li class="<?php echo is_menu_active('my-requests', $activeMenu); ?>">
+                            <a href="my-requests.php" class="waves-effect <?php echo is_link_active('my-requests', $activeMenu); ?>">
+                                <i class="ri-inbox-archive-line"></i>
+                                <span>My Requests</span>
+                            </a>
+                        </li>
+
                         <li class="<?php echo is_menu_active('ward', $activeMenu); ?>">
                             <a href="wards.php" class="waves-effect <?php echo is_link_active('ward', $activeMenu); ?>">
                                 <i class="ri-map-pin-2-line"></i>
@@ -267,12 +274,6 @@ function render_admin_header(string $title, array $extraCss = [], string $active
                             </a>
                         </li>
 
-                        <li class="<?php echo is_menu_active('my-requests', $activeMenu); ?>">
-                            <a href="my-requests.php" class="waves-effect <?php echo is_link_active('my-requests', $activeMenu); ?>">
-                                <i class="ri-inbox-archive-line"></i>
-                                <span>My Requests</span>
-                            </a>
-                        </li>
                     </ul>
                 </div>
             </div>
