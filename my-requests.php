@@ -7,8 +7,19 @@ require_admin_login();
 
 $flash = get_flash_message();
 $pdo = app_pdo();
+$whereClause = '';
+if (isset($_GET['filter'])) {
+    if ($_GET['filter'] === 'closed') {
+        $whereClause = " WHERE TRIM(LOWER(rsm.StatusName)) IN ('completed', 'declined')";
+    } elseif ($_GET['filter'] === 'open') {
+        $whereClause = " WHERE TRIM(LOWER(rsm.StatusName)) = 'raised'";
+    } elseif ($_GET['filter'] === 'in_progress') {
+        $whereClause = " WHERE TRIM(LOWER(rsm.StatusName)) = 'in progress'";
+    }
+}
+
 $requests = $pdo->query(
-    'SELECT cr.CitizenRequestId, cr.RequestNo, cu.Name, cu.MobileNo, rtm.RequestTypeName,
+    "SELECT cr.CitizenRequestId, cr.RequestNo, cu.Name, cu.MobileNo, rtm.RequestTypeName,
             w.WardName, a.AreaName, rsm.StatusName, cr.RaisedDate, cr.IsActive
      FROM CitizenRequest cr
      LEFT JOIN CitizenUser cu ON cu.CitizenUserId = cr.CitizenUserId
@@ -16,7 +27,8 @@ $requests = $pdo->query(
      LEFT JOIN Ward w ON w.WardId = cr.WardId
      LEFT JOIN Area a ON a.AreaId = cr.AreaId
      LEFT JOIN RequestStatusMaster rsm ON rsm.RequestStatusId = cr.RequestStatusId
-     ORDER BY cr.CitizenRequestId DESC'
+     $whereClause
+     ORDER BY cr.CitizenRequestId DESC"
 )->fetchAll();
 
 $requestTypes = array_filter(array_unique(array_column($requests, 'RequestTypeName')));
@@ -91,6 +103,9 @@ render_admin_header('My Requests', [
                             </ol>
                         </div>
                     </div>
+                    <?php if (isset($_GET['filter']) && in_array($_GET['filter'], ['closed', 'open', 'in_progress', 'all'])): ?>
+                    <div id="export-excel-container" class="mt-3 mt-md-0"></div>
+                    <?php endif; ?>
                 </div>
 
                 <div class="row mb-3 align-items-end">
@@ -238,8 +253,35 @@ render_admin_header('My Requests', [
             responsive: true,
             pageLength: 10,
             lengthChange: false,
-            order: [[7, 'desc']]
+            order: [[7, 'desc']]<?php if (isset($_GET['filter']) && in_array($_GET['filter'], ['closed', 'open', 'in_progress', 'all'])): ?>,
+            buttons: [
+                {
+                    extend: 'excelHtml5',
+                    text: '<i class="ri-file-excel-2-line align-middle me-1"></i> Excel',
+                    className: 'btn btn-success text-white',
+                    init: function(api, node, config) {
+                        $(node).removeClass('btn-secondary');
+                    },
+                    filename: function() {
+                        const d = new Date();
+                        const year = d.getFullYear();
+                        const month = String(d.getMonth() + 1).padStart(2, '0');
+                        const day = String(d.getDate()).padStart(2, '0');
+                        const filterType = <?php echo json_encode($_GET['filter']); ?>;
+                        const prefix = filterType === 'open' ? 'Open_Requests_' : (filterType === 'in_progress' ? 'In_Progress_Requests_' : (filterType === 'all' ? 'All_Requests_' : 'Closed_Requests_'));
+                        return prefix + year + month + day;
+                    },
+                    exportOptions: {
+                        columns: [0, 1, 2, 3, 4, 5, 6, 7]
+                    }
+                }
+            ]
+            <?php endif; ?>
         });
+
+        <?php if (isset($_GET['filter']) && in_array($_GET['filter'], ['closed', 'open', 'in_progress', 'all'])): ?>
+        myRequestsTable.buttons().container().appendTo('#export-excel-container');
+        <?php endif; ?>
 
         $.fn.dataTable.ext.search.push(function(settings, data) {
             if (settings.nTable !== tableElement) {
@@ -316,4 +358,8 @@ render_admin_footer([
     app_asset('assets/libs/datatables.net-bs4/js/dataTables.bootstrap4.min.js'),
     app_asset('assets/libs/datatables.net-responsive/js/dataTables.responsive.min.js'),
     app_asset('assets/libs/datatables.net-responsive-bs4/js/responsive.bootstrap4.min.js'),
+    app_asset('assets/libs/datatables.net-buttons/js/dataTables.buttons.min.js'),
+    app_asset('assets/libs/datatables.net-buttons-bs4/js/buttons.bootstrap4.min.js'),
+    app_asset('assets/libs/jszip/jszip.min.js'),
+    app_asset('assets/libs/datatables.net-buttons/js/buttons.html5.min.js'),
 ]);

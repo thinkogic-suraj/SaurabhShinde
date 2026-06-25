@@ -118,7 +118,7 @@ render_admin_header('Dashboard', [], 'dashboard');
                     <i class="ri-file-list-3-line text-white" style="font-size: 70px; opacity: 0.4;"></i>
                 </div>
             </div>
-            <a href="my-requests.php" class="d-block text-center text-white py-1" style="background-color: rgba(0,0,0,0.1); text-decoration: none; font-size: 13px;">
+            <a href="my-requests.php?filter=all" class="d-block text-center text-white py-1" style="background-color: rgba(0,0,0,0.1); text-decoration: none; font-size: 13px;">
                 More info <i class="mdi mdi-arrow-right-circle ms-1"></i>
             </a>
         </div>
@@ -133,7 +133,7 @@ render_admin_header('Dashboard', [], 'dashboard');
                     <i class="ri-checkbox-circle-line text-white" style="font-size: 70px; opacity: 0.4;"></i>
                 </div>
             </div>
-            <a href="my-requests.php" class="d-block text-center text-white py-1" style="background-color: rgba(0,0,0,0.1); text-decoration: none; font-size: 13px;">
+            <a href="my-requests.php?filter=closed" class="d-block text-center text-white py-1" style="background-color: rgba(0,0,0,0.1); text-decoration: none; font-size: 13px;">
                 More info <i class="mdi mdi-arrow-right-circle ms-1"></i>
             </a>
         </div>
@@ -148,7 +148,7 @@ render_admin_header('Dashboard', [], 'dashboard');
                     <i class="ri-folder-open-line text-white" style="font-size: 70px; opacity: 0.4;"></i>
                 </div>
             </div>
-            <a href="my-requests.php" class="d-block text-center text-white py-1" style="background-color: rgba(0,0,0,0.1); text-decoration: none; font-size: 13px;">
+            <a href="my-requests.php?filter=open" class="d-block text-center text-white py-1" style="background-color: rgba(0,0,0,0.1); text-decoration: none; font-size: 13px;">
                 More info <i class="mdi mdi-arrow-right-circle ms-1"></i>
             </a>
         </div>
@@ -163,7 +163,7 @@ render_admin_header('Dashboard', [], 'dashboard');
                     <i class="ri-loader-4-line text-white" style="font-size: 70px; opacity: 0.4;"></i>
                 </div>
             </div>
-            <a href="my-requests.php" class="d-block text-center text-white py-1" style="background-color: rgba(0,0,0,0.1); text-decoration: none; font-size: 13px;">
+            <a href="my-requests.php?filter=in_progress" class="d-block text-center text-white py-1" style="background-color: rgba(0,0,0,0.1); text-decoration: none; font-size: 13px;">
                 More info <i class="mdi mdi-arrow-right-circle ms-1"></i>
             </a>
         </div>
