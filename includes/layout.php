@@ -274,6 +274,13 @@ function render_admin_header(string $title, array $extraCss = [], string $active
                             </a>
                         </li>
 
+                        <li class="<?php echo is_menu_active('foundation-banner', $activeMenu); ?>">
+                            <a href="foundation-banners.php" class="waves-effect <?php echo is_link_active('foundation-banner', $activeMenu); ?>">
+                                <i class="ri-image-2-line"></i>
+                                <span>Foundation Banner</span>
+                            </a>
+                        </li>
+
                     </ul>
                 </div>
             </div>
