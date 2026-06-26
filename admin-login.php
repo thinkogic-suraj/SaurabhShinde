@@ -126,6 +126,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             .auth-form-group-custom {
                 position: relative !important;
             }
+            .auth-input-wrap {
+                position: relative;
+            }
             .auth-form-group-custom .form-control {
                 height: 58px !important;
                 padding-left: 3rem !important;
@@ -134,12 +137,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 line-height: 58px !important;
             }
             .auth-form-group-custom .auti-custom-input-icon {
-                top: calc(100% - 29px) !important;
+                position: absolute !important;
+                top: 50% !important;
                 left: 1rem !important;
                 transform: translateY(-50%) !important;
                 z-index: 2 !important;
                 line-height: 1 !important;
                 font-size: 1.2rem !important;
+                pointer-events: none !important;
             }
             .authentication-page-content .mt-5 {
                 margin-top: 2rem !important;
@@ -194,16 +199,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                 <form id="loginForm" method="POST" action="" novalidate>
                     
                                                     <div class="mb-3 auth-form-group-custom mb-4">
-                                                        <i class="ri-phone-line auti-custom-input-icon"></i>
                                                         <label for="mobile" class="fw-semibold login-form-label">Mobile Number</label>
-                                                        <input type="text" class="form-control" id="mobile" name="mobile" placeholder="Enter 10-digit mobile number" value="<?php echo htmlspecialchars($mobile, ENT_QUOTES, 'UTF-8'); ?>" autocomplete="off">
+                                                        <div class="auth-input-wrap">
+                                                            <i class="ri-phone-line auti-custom-input-icon"></i>
+                                                            <input type="text" class="form-control" id="mobile" name="mobile" placeholder="Enter 10-digit mobile number" value="<?php echo htmlspecialchars($mobile, ENT_QUOTES, 'UTF-8'); ?>" autocomplete="off">
+                                                        </div>
                                                         <div id="mobileError" class="error-message">Valid 10-digit mobile number is required.</div>
                                                     </div>
                             
                                                     <div class="mb-3 auth-form-group-custom mb-4">
-                                                        <i class="ri-lock-2-line auti-custom-input-icon"></i>
                                                         <label for="password" class="fw-semibold login-form-label">Password</label>
-                                                        <input type="password" class="form-control" id="password" name="password" placeholder="Enter password">
+                                                        <div class="auth-input-wrap">
+                                                            <i class="ri-lock-2-line auti-custom-input-icon"></i>
+                                                            <input type="password" class="form-control" id="password" name="password" placeholder="Enter password">
+                                                        </div>
                                                         <div id="passwordError" class="error-message">Password is required.</div>
                                                     </div>
                             
