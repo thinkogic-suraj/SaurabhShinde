@@ -298,12 +298,14 @@ function render_admin_header(string $title, array $extraCss = [], string $active
                         <div class="col-12">
                             <div class="page-title-box">
                                 <h4 class="mb-1"><?php echo htmlspecialchars($title, ENT_QUOTES, 'UTF-8'); ?></h4>
+<?php if ($activeMenu !== 'dashboard'): ?>
                                 <div>
                                     <ol class="breadcrumb m-0">
                                         <li class="breadcrumb-item"><a href="dashboard.php">Dashboard</a></li>
                                         <li class="breadcrumb-item active"><?php echo htmlspecialchars($title, ENT_QUOTES, 'UTF-8'); ?></li>
                                     </ol>
                                 </div>
+<?php endif; ?>
                             </div>
                         </div>
                     </div>
