@@ -64,31 +64,6 @@ function render_admin_header(string $title, array $extraCss = [], string $active
         #layout-wrapper {
             background-color: #fff !important;
         }
-        body[data-sidebar=dark].vertical-collpsed {
-            min-height: 100vh !important;
-        }
-        #layout-wrapper {
-            min-height: 100vh;
-        }
-        .main-content {
-            min-height: calc(100vh - 70px);
-            display: flex;
-            flex-direction: column;
-        }
-        .page-content {
-            flex: 1 0 auto;
-            padding-bottom: 1rem !important;
-        }
-        .footer {
-            position: static !important;
-            left: auto !important;
-            right: auto !important;
-            width: auto !important;
-            margin-top: auto;
-        }
-        .vertical-collpsed .footer {
-            left: auto !important;
-        }
         body,
         button,
         input,
@@ -215,7 +190,7 @@ function render_admin_header(string $title, array $extraCss = [], string $active
                     </button>
 
                     <!-- App Search-->
-                    <form class="app-search d-none d-lg-block">
+                    <form class="app-search d-none">
                         <div class="position-relative">
                             <input type="text" class="form-control" placeholder="Search...">
                             <span class="ri-search-line"></span>
