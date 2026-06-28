@@ -246,6 +246,7 @@ render_admin_header($pageTitle, [], 'foundation-banner', false);
                                     <?php echo $isEditMode ? '' : 'required'; ?>
                                     data-parsley-required-message="Banner image is required."
                                 >
+                                <div class="form-text">Note: Recommended image dimensions: 400 x 150 pixels.</div>
                                 <?php if (isset($errors['BannerImage'])): ?>
                                     <div class="invalid-feedback"><?php echo htmlspecialchars($errors['BannerImage'], ENT_QUOTES, 'UTF-8'); ?></div>
                                 <?php endif; ?>
