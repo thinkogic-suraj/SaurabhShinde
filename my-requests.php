@@ -12,6 +12,7 @@ $selectedStatusFilter = '';
 if (isset($_GET['filter'])) {
     if ($_GET['filter'] === 'closed') {
         $whereClause = " WHERE TRIM(LOWER(rsm.StatusName)) IN ('completed', 'declined')";
+        $selectedStatusFilter = 'Completed';
     } elseif ($_GET['filter'] === 'open') {
         $whereClause = " WHERE TRIM(LOWER(rsm.StatusName)) = 'raised'";
         $selectedStatusFilter = 'Raised';
@@ -281,6 +282,8 @@ render_admin_header('My Requests', [
         const tableElement = document.getElementById('my-requests-table');
         const dateFromInput = document.getElementById('filter-date-from');
         const dateToInput = document.getElementById('filter-date-to');
+        const statusFilterElement = document.getElementById('filter-status');
+        const dashboardFilter = <?php echo json_encode($_GET['filter'] ?? '', JSON_UNESCAPED_SLASHES); ?>;
         const myRequestsTable = $('#my-requests-table').DataTable({
             responsive: true,
             pageLength: 10,
@@ -344,6 +347,19 @@ render_admin_header('My Requests', [
                 }
             }
 
+            const selectedStatus = statusFilterElement ? statusFilterElement.value.trim().toLowerCase() : '';
+            const rowStatus = (data[6] || '').trim().toLowerCase();
+
+            if (selectedStatus !== '') {
+                if (dashboardFilter === 'closed' && selectedStatus === 'completed') {
+                    if (rowStatus !== 'completed' && rowStatus !== 'declined') {
+                        return false;
+                    }
+                } else if (rowStatus !== selectedStatus) {
+                    return false;
+                }
+            }
+
             return true;
         });
 
@@ -374,8 +390,7 @@ render_admin_header('My Requests', [
             myRequestsTable.column(5).search(val ? val : '', true, false).draw();
         });
         $('#filter-status').on('change', function() {
-            var val = $.fn.dataTable.util.escapeRegex($(this).val());
-            myRequestsTable.column(6).search(val ? val : '', true, false).draw();
+            myRequestsTable.draw();
         });
 
         const selectedStatusFilter = <?php echo json_encode($selectedStatusFilter, JSON_UNESCAPED_SLASHES); ?>;
