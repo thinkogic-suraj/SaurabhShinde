@@ -12,8 +12,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delet
 
     if ($bannerIdToDelete > 0) {
         $deleteStmt = $pdo->prepare(
-            'DELETE FROM FoundationBanner
-             WHERE FoundatationBannerId = :banner_id'
+            'UPDATE FoundationBanner
+             SET IsActive = 0
+             WHERE FoundatationBannerId = :banner_id
+               AND IsActive = 1'
         );
         $deleteStmt->execute(['banner_id' => $bannerIdToDelete]);
 
@@ -149,16 +151,20 @@ render_admin_header('Foundation Banner Management', [
                                     <td><?php echo htmlspecialchars((string) ($banner['CreatedDate'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
                                     <td>
                                         <div class="d-flex align-items-center gap-2">
-                                            <a href="foundation-banner-form.php?id=<?php echo (int) $banner['FoundatationBannerId']; ?>" class="btn btn-sm" style="background-color: #002253; border-color: #002253; color: white;">
-                                                <i class="ri-edit-2-line align-middle me-1"></i> Edit
-                                            </a>
-                                            <form method="POST" action="" class="m-0 delete-foundation-banner-form">
-                                                <input type="hidden" name="action" value="delete">
-                                                <input type="hidden" name="banner_id" value="<?php echo (int) $banner['FoundatationBannerId']; ?>">
-                                                <button type="submit" class="btn btn-sm" style="background-color: #dc3545; border-color: #dc3545; color: white;">
-                                                    <i class="ri-delete-bin-line align-middle me-1"></i> Delete
-                                                </button>
-                                            </form>
+                                            <?php if ((int) $banner['IsActive'] === 1): ?>
+                                                <a href="foundation-banner-form.php?id=<?php echo (int) $banner['FoundatationBannerId']; ?>" class="btn btn-sm" style="background-color: #002253; border-color: #002253; color: white;">
+                                                    <i class="ri-edit-2-line align-middle me-1"></i> Edit
+                                                </a>
+                                                <form method="POST" action="" class="m-0 delete-foundation-banner-form">
+                                                    <input type="hidden" name="action" value="delete">
+                                                    <input type="hidden" name="banner_id" value="<?php echo (int) $banner['FoundatationBannerId']; ?>">
+                                                    <button type="submit" class="btn btn-sm" style="background-color: #dc3545; border-color: #dc3545; color: white;">
+                                                        <i class="ri-delete-bin-line align-middle me-1"></i> Delete
+                                                    </button>
+                                                </form>
+                                            <?php else: ?>
+                                                <span class="text-muted small">Deleted</span>
+                                            <?php endif; ?>
                                         </div>
                                     </td>
                                 </tr>

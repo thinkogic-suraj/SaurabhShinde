@@ -16,16 +16,26 @@ $errors = [];
 
 $wards = $pdo->query('SELECT WardId, WardName FROM Ward ORDER BY WardName ASC')->fetchAll();
 
-if ($isEditMode) {
-    $stmt = $pdo->prepare('SELECT AreaId, WardId, AreaName, IsActive FROM Area WHERE AreaId = :id');
-    $stmt->execute(['id' => $areaId]);
-    $existingArea = $stmt->fetch();
-
+$redirectIfAreaInactive = static function (array|false $existingArea): void {
     if (!$existingArea) {
         set_flash_message('danger', 'Selected area record was not found.');
         header('Location: areas.php');
         exit;
     }
+
+    if ((int) ($existingArea['IsActive'] ?? 1) !== 1) {
+        set_flash_message('danger', 'This area has been deleted and cannot be edited.');
+        header('Location: areas.php');
+        exit;
+    }
+};
+
+if ($isEditMode) {
+    $stmt = $pdo->prepare('SELECT AreaId, WardId, AreaName, IsActive FROM Area WHERE AreaId = :id');
+    $stmt->execute(['id' => $areaId]);
+    $existingArea = $stmt->fetch();
+
+    $redirectIfAreaInactive($existingArea);
 
     $area = $existingArea;
 }
@@ -70,6 +80,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($errors === []) {
         if ($isEditMode) {
+            $existingAreaStmt = $pdo->prepare('SELECT AreaId, IsActive FROM Area WHERE AreaId = :id');
+            $existingAreaStmt->execute(['id' => $areaId]);
+            $redirectIfAreaInactive($existingAreaStmt->fetch());
+
             $stmt = $pdo->prepare(
                 'UPDATE Area
                  SET WardId = :ward_id, AreaName = :area_name

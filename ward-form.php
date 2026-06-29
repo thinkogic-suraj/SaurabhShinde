@@ -13,16 +13,26 @@ $ward = [
 ];
 $errors = [];
 
-if ($isEditMode) {
-    $stmt = $pdo->prepare('SELECT WardId, WardName FROM Ward WHERE WardId = :id');
-    $stmt->execute(['id' => $wardId]);
-    $existingWard = $stmt->fetch();
-
+$redirectIfWardInactive = static function (array|false $existingWard): void {
     if (!$existingWard) {
         set_flash_message('danger', 'Selected ward record was not found.');
         header('Location: wards.php');
         exit;
     }
+
+    if ((int) ($existingWard['IsActive'] ?? 1) !== 1) {
+        set_flash_message('danger', 'This ward has been deleted and cannot be edited.');
+        header('Location: wards.php');
+        exit;
+    }
+};
+
+if ($isEditMode) {
+    $stmt = $pdo->prepare('SELECT WardId, WardName, IsActive FROM Ward WHERE WardId = :id');
+    $stmt->execute(['id' => $wardId]);
+    $existingWard = $stmt->fetch();
+
+    $redirectIfWardInactive($existingWard);
 
     $ward = $existingWard;
 }
@@ -58,6 +68,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($errors === []) {
         if ($isEditMode) {
+            $existingWardStmt = $pdo->prepare('SELECT WardId, IsActive FROM Ward WHERE WardId = :id');
+            $existingWardStmt->execute(['id' => $wardId]);
+            $redirectIfWardInactive($existingWardStmt->fetch());
+
             $stmt = $pdo->prepare('UPDATE Ward SET WardName = :ward_name WHERE WardId = :ward_id');
             $stmt->execute([
                 'ward_name' => $ward['WardName'],

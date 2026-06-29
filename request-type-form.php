@@ -14,6 +14,20 @@ $requestType = [
 ];
 $errors = [];
 
+$redirectIfRequestTypeInactive = static function (array|false $existingRequestType): void {
+    if (!$existingRequestType) {
+        set_flash_message('danger', 'Selected request type record was not found.');
+        header('Location: request-types.php');
+        exit;
+    }
+
+    if ((int) ($existingRequestType['IsActive'] ?? 1) !== 1) {
+        set_flash_message('danger', 'This request type has been deleted and cannot be edited.');
+        header('Location: request-types.php');
+        exit;
+    }
+};
+
 if ($isEditMode) {
     $stmt = $pdo->prepare(
         'SELECT RequestTypeId, RequestTypeName, Description, IsActive
@@ -23,11 +37,7 @@ if ($isEditMode) {
     $stmt->execute(['id' => $requestTypeId]);
     $existingRequestType = $stmt->fetch();
 
-    if (!$existingRequestType) {
-        set_flash_message('danger', 'Selected request type record was not found.');
-        header('Location: request-types.php');
-        exit;
-    }
+    $redirectIfRequestTypeInactive($existingRequestType);
 
     $requestType = $existingRequestType;
 }
@@ -68,6 +78,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($errors === []) {
         if ($isEditMode) {
+            $existingRequestTypeStmt = $pdo->prepare(
+                'SELECT RequestTypeId, IsActive
+                 FROM RequestTypeMaster
+                 WHERE RequestTypeId = :id'
+            );
+            $existingRequestTypeStmt->execute(['id' => $requestTypeId]);
+            $redirectIfRequestTypeInactive($existingRequestTypeStmt->fetch());
+
             $stmt = $pdo->prepare(
                 'UPDATE RequestTypeMaster
                  SET RequestTypeName = :request_type_name, Description = :description

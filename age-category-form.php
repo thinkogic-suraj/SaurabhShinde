@@ -13,6 +13,20 @@ $ageCategory = [
 ];
 $errors = [];
 
+$redirectIfAgeCategoryInactive = static function (array|false $existingAgeCategory): void {
+    if (!$existingAgeCategory) {
+        set_flash_message('danger', 'Selected age category record was not found.');
+        header('Location: age-categories.php');
+        exit;
+    }
+
+    if ((int) ($existingAgeCategory['IsActive'] ?? 1) !== 1) {
+        set_flash_message('danger', 'This age category has been deleted and cannot be edited.');
+        header('Location: age-categories.php');
+        exit;
+    }
+};
+
 if ($isEditMode) {
     $stmt = $pdo->prepare(
         'SELECT AgeCategoryId, CategoryName, IsActive
@@ -22,11 +36,7 @@ if ($isEditMode) {
     $stmt->execute(['id' => $ageCategoryId]);
     $existingAgeCategory = $stmt->fetch();
 
-    if (!$existingAgeCategory) {
-        set_flash_message('danger', 'Selected age category record was not found.');
-        header('Location: age-categories.php');
-        exit;
-    }
+    $redirectIfAgeCategoryInactive($existingAgeCategory);
 
     $ageCategory = $existingAgeCategory;
 }
@@ -62,6 +72,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($errors === []) {
         if ($isEditMode) {
+            $existingAgeCategoryStmt = $pdo->prepare(
+                'SELECT AgeCategoryId, IsActive
+                 FROM AgeCategoryMaster
+                 WHERE AgeCategoryId = :id'
+            );
+            $existingAgeCategoryStmt->execute(['id' => $ageCategoryId]);
+            $redirectIfAgeCategoryInactive($existingAgeCategoryStmt->fetch());
+
             $stmt = $pdo->prepare(
                 'UPDATE AgeCategoryMaster
                  SET CategoryName = :category_name

@@ -16,6 +16,20 @@ $banner = [
 ];
 $errors = [];
 
+$redirectIfBannerInactive = static function (array|false $existingBanner): void {
+    if (!$existingBanner) {
+        set_flash_message('danger', 'Selected foundation banner record was not found.');
+        header('Location: foundation-banners.php');
+        exit;
+    }
+
+    if ((int) ($existingBanner['IsActive'] ?? 1) !== 1) {
+        set_flash_message('danger', 'This foundation banner has been deleted and cannot be edited.');
+        header('Location: foundation-banners.php');
+        exit;
+    }
+};
+
 if ($isEditMode) {
     $stmt = $pdo->prepare(
         'SELECT FoundatationBannerId, BannerTitle, BannerDescription, BannerImage, IsActive
@@ -25,11 +39,7 @@ if ($isEditMode) {
     $stmt->execute(['id' => $bannerId]);
     $existingBanner = $stmt->fetch();
 
-    if (!$existingBanner) {
-        set_flash_message('danger', 'Selected foundation banner record was not found.');
-        header('Location: foundation-banners.php');
-        exit;
-    }
+    $redirectIfBannerInactive($existingBanner);
 
     $banner = [
         'BannerTitle' => (string) ($existingBanner['BannerTitle'] ?? ''),
@@ -76,6 +86,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($errors === []) {
         if ($isEditMode) {
+            $existingBannerStmt = $pdo->prepare(
+                'SELECT FoundatationBannerId, IsActive
+                 FROM FoundationBanner
+                 WHERE FoundatationBannerId = :id'
+            );
+            $existingBannerStmt->execute(['id' => $bannerId]);
+            $redirectIfBannerInactive($existingBannerStmt->fetch());
+
             $stmt = $pdo->prepare(
                 'UPDATE FoundationBanner
                  SET BannerTitle = :banner_title,
