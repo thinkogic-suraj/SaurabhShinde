@@ -1,23 +1,58 @@
 <?php
 require __DIR__ . '/includes/auth.php';
 require __DIR__ . '/includes/db.php';
+require __DIR__ . '/includes/rbac.php';
 require __DIR__ . '/includes/layout.php';
 
 require_admin_login();
 
 $pdo = app_pdo();
+$currentAdmin = current_admin_context($pdo);
+$roleIds = app_role_ids($pdo);
+
+if ($currentAdmin === null || !can_access_user_management($currentAdmin, $roleIds)) {
+    set_flash_message('danger', 'You are not authorized to access user management.');
+    header('Location: dashboard.php');
+    exit;
+}
+
+$isSuperAdmin = is_super_admin_user($currentAdmin, $roleIds);
+$adminRoleId = $roleIds['admin'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete') {
     $userIdToDelete = (int) ($_POST['user_id'] ?? 0);
 
     if ($userIdToDelete > 0) {
-        $deleteStmt = $pdo->prepare('UPDATE Employee SET IsActive = 0 WHERE EmployeeId = :employee_id');
-        $deleteStmt->execute(['employee_id' => $userIdToDelete]);
+        $targetStmt = $pdo->prepare(
+            'SELECT EmployeeId, UserName, RoleId, CreatedBy, IsActive
+             FROM Employee
+             WHERE EmployeeId = :employee_id
+             LIMIT 1'
+        );
+        $targetStmt->execute([
+            'employee_id' => $userIdToDelete,
+        ]);
+        $targetUser = $targetStmt->fetch();
 
-        if ($deleteStmt->rowCount() > 0) {
-            set_flash_message('success', 'User deactivated successfully.');
+        if (!$targetUser || !can_soft_delete_managed_user($currentAdmin, $targetUser, $roleIds)) {
+            set_flash_message('danger', 'You are not authorized to delete this user.');
+        } elseif ((int) ($targetUser['IsActive'] ?? 0) !== 1) {
+            set_flash_message('danger', 'This user is already inactive.');
         } else {
-            set_flash_message('danger', 'Selected user record was not found.');
+            $deleteStmt = $pdo->prepare(
+                'UPDATE Employee
+                 SET IsActive = 0
+                 WHERE EmployeeId = :employee_id'
+            );
+            $deleteStmt->execute([
+                'employee_id' => $userIdToDelete,
+            ]);
+
+            if ($deleteStmt->rowCount() > 0) {
+                set_flash_message('success', 'User deactivated successfully.');
+            } else {
+                set_flash_message('danger', 'Selected user record was not found.');
+            }
         }
     }
 
@@ -25,12 +60,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delet
     exit;
 }
 
+if ($isSuperAdmin) {
+    $userStmt = $pdo->prepare(
+        'SELECT e.EmployeeId,
+                e.UserName,
+                e.MobileNo,
+                e.Email,
+                e.RoleId,
+                e.CreatedBy,
+                e.IsMobileVerified,
+                e.IsActive
+         FROM Employee e
+         WHERE e.RoleId = :admin_role_id
+            OR e.EmployeeId = :current_admin_id
+         ORDER BY CASE WHEN e.EmployeeId = :current_admin_id THEN 0 ELSE 1 END,
+                  e.EmployeeId DESC'
+    );
+    $userStmt->execute([
+        'admin_role_id' => $adminRoleId,
+        'current_admin_id' => (int) $currentAdmin['EmployeeId'],
+    ]);
+} else {
+    $userStmt = $pdo->prepare(
+        'SELECT e.EmployeeId,
+                e.UserName,
+                e.MobileNo,
+                e.Email,
+                e.RoleId,
+                e.CreatedBy,
+                e.IsMobileVerified,
+                e.IsActive
+         FROM Employee e
+         WHERE e.RoleId = :admin_role_id
+         ORDER BY e.EmployeeId DESC'
+    );
+    $userStmt->execute([
+        'admin_role_id' => $adminRoleId,
+    ]);
+}
+
+$users = $userStmt->fetchAll();
 $flash = get_flash_message();
-$users = $pdo->query(
-    'SELECT e.EmployeeId, e.UserName, e.MobileNo, e.Email, e.IsMobileVerified, e.IsActive
-     FROM Employee e
-     ORDER BY e.EmployeeId DESC'
-)->fetchAll();
 
 render_admin_header('User Management', [
     app_asset('assets/libs/datatables.net-bs4/css/dataTables.bootstrap4.min.css'),
@@ -47,6 +117,10 @@ render_admin_header('User Management', [
         padding: 0.25rem 0.5rem !important;
         font-size: 0.875rem !important;
     }
+    .action-muted {
+        color: #94a3b8;
+        font-size: 0.875rem;
+    }
 </style>
 <div class="row">
     <div class="col-12">
@@ -56,7 +130,7 @@ render_admin_header('User Management', [
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
             <script>
-                setTimeout(function() {
+                setTimeout(function () {
                     var alertNode = document.querySelector('.alert');
                     if (alertNode) {
                         var alert = new bootstrap.Alert(alertNode);
@@ -111,16 +185,24 @@ render_admin_header('User Management', [
                                 <th>Mobile Number</th>
                                 <th>Email</th>
                                 <th>Status</th>
-                                <th style="width: 140px;">Action</th>
+                                <th style="width: 160px;">Action</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php foreach ($users as $user): ?>
                                 <?php
+                                if (!can_view_managed_user($currentAdmin, $user, $roleIds)) {
+                                    continue;
+                                }
+
                                 $fullUserName = (string) $user['UserName'];
                                 $fullEmail = (string) ($user['Email'] ?? '');
                                 $displayUserName = mb_strlen($fullUserName) > 20 ? mb_substr($fullUserName, 0, 20) . '...' : $fullUserName;
                                 $displayEmail = mb_strlen($fullEmail) > 25 ? mb_substr($fullEmail, 0, 25) . '...' : $fullEmail;
+                                $isActive = (int) $user['IsActive'] === 1;
+                                $canEdit = can_edit_managed_user($currentAdmin, $user, $roleIds)
+                                    && ($isActive || can_change_managed_user_status($currentAdmin, $user, $roleIds));
+                                $canDelete = $isActive && can_soft_delete_managed_user($currentAdmin, $user, $roleIds);
                                 ?>
                                 <tr>
                                     <td title="<?php echo htmlspecialchars($fullUserName, ENT_QUOTES, 'UTF-8'); ?>">
@@ -131,29 +213,33 @@ render_admin_header('User Management', [
                                         <?php echo htmlspecialchars($displayEmail, ENT_QUOTES, 'UTF-8'); ?>
                                     </td>
                                     <td>
-                                        <?php if ((int) $user['IsActive'] === 1): ?>
+                                        <?php if ($isActive): ?>
                                             <span class="badge rounded-pill bg-success">Active</span>
                                         <?php else: ?>
                                             <span class="badge rounded-pill bg-secondary">Inactive</span>
                                         <?php endif; ?>
                                     </td>
                                     <td>
-                                        <div class="d-flex align-items-center gap-2">
-                                            <?php
-                                            $isActive = (int) $user['IsActive'] === 1;
-                                            $btnOpacity = $isActive ? '' : ' opacity: 0.5; pointer-events: none;';
-                                            ?>
-                                            <a href="<?php echo $isActive ? 'user-form.php?id=' . (int) $user['EmployeeId'] : '#'; ?>" class="btn btn-sm<?php echo $isActive ? '' : ' disabled'; ?>" style="background-color: #002253; border-color: #002253; color: white;<?php echo $btnOpacity; ?>">
-                                                <i class="ri-edit-2-line align-middle me-1"></i> Edit
-                                            </a>
-                                            <form method="POST" action="" class="m-0 delete-user-form">
-                                                <input type="hidden" name="action" value="delete">
-                                                <input type="hidden" name="user_id" value="<?php echo (int) $user['EmployeeId']; ?>">
-                                                <button type="submit" class="btn btn-sm" style="background-color: #dc3545; border-color: #dc3545; color: white;<?php echo $btnOpacity; ?>" <?php echo $isActive ? '' : 'disabled'; ?>>
-                                                    <i class="ri-delete-bin-line align-middle me-1"></i> Delete
-                                                </button>
-                                            </form>
-                                        </div>
+                                        <?php if ($canEdit || $canDelete): ?>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <?php if ($canEdit): ?>
+                                                    <a href="user-form.php?id=<?php echo (int) $user['EmployeeId']; ?>" class="btn btn-sm" style="background-color: #002253; border-color: #002253; color: white;">
+                                                        <i class="ri-edit-2-line align-middle me-1"></i> Edit
+                                                    </a>
+                                                <?php endif; ?>
+                                                <?php if ($canDelete): ?>
+                                                    <form method="POST" action="" class="m-0 delete-user-form">
+                                                        <input type="hidden" name="action" value="delete">
+                                                        <input type="hidden" name="user_id" value="<?php echo (int) $user['EmployeeId']; ?>">
+                                                        <button type="submit" class="btn btn-sm" style="background-color: #dc3545; border-color: #dc3545; color: white;">
+                                                            <i class="ri-delete-bin-line align-middle me-1"></i> Delete
+                                                        </button>
+                                                    </form>
+                                                <?php endif; ?>
+                                            </div>
+                                        <?php else: ?>
+                                            <span class="action-muted">No actions</span>
+                                        <?php endif; ?>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -175,11 +261,11 @@ render_admin_header('User Management', [
 
         $('.dataTables_filter').hide();
 
-        $('#custom-search').on('keyup', function() {
+        $('#custom-search').on('keyup', function () {
             userTable.search(this.value).draw();
         });
 
-        $('#filter-status').on('change', function() {
+        $('#filter-status').on('change', function () {
             var val = $.fn.dataTable.util.escapeRegex($(this).val());
             userTable.column(3).search(val ? '^' + val + '$' : '', true, false).draw();
         });

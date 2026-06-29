@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/rbac.php';
+
 function app_asset(string $path): string
 {
     return 'themesdesign.in/nazox/layouts/' . ltrim($path, '/');
@@ -27,15 +29,11 @@ function render_admin_header(string $title, array $extraCss = [], string $active
 
     if (function_exists('app_pdo') && !empty($_SESSION['admin_id'])) {
         try {
-            $profileStmt = app_pdo()->prepare('SELECT UserName, MobileNo FROM Employee WHERE EmployeeId = :employee_id LIMIT 1');
-            $profileStmt->execute(['employee_id' => (int) $_SESSION['admin_id']]);
-            $profileData = $profileStmt->fetch();
+            $profileData = current_admin_context(app_pdo());
 
             if ($profileData) {
                 $profileName = (string) ($profileData['UserName'] ?? $profileName);
                 $mobile = (string) ($profileData['MobileNo'] ?? $mobile);
-                $_SESSION['admin_name'] = $profileName;
-                $_SESSION['admin_mobile'] = $mobile;
             }
         } catch (Throwable $e) {
             // Fall back to current session values.

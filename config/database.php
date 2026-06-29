@@ -9,8 +9,8 @@ return [
     'charset' => 'utf8mb4',
 
 
-     'admin_table' => 'Employee',
-    'mobile_column' => 'MobileNo',
+    'admin_table' => 'Employee',
+    'username_column' => 'UserName',
     'password_column' => 'UserPassword',
     'id_column' => 'EmployeeId',
 ];
