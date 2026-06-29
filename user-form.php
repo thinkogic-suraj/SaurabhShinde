@@ -277,14 +277,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $pageTitle = $isEditMode ? 'Edit User' : 'Add User';
-$canManageStatus = $isEditMode && $editableUser !== null && can_change_managed_user_status($currentAdmin, $editableUser, $roleIds);
-$displayRoleLabel = $isEditMode && $editableUser !== null && (int) $editableUser['RoleId'] === $roleIds['super_admin']
-    ? 'Super Admin'
-    : 'Admin';
-$roleNote = $displayRoleLabel === 'Super Admin'
-    ? 'This account keeps its current Super Admin role.'
-    : 'Users created from this screen are always saved as Admin.';
-
 render_admin_header($pageTitle, [], 'user', false);
 ?>
 <style>
@@ -293,11 +285,6 @@ render_admin_header($pageTitle, [], 'user', false);
     }
     .user-form-field {
         max-width: 420px;
-    }
-    .role-note {
-        color: #64748b;
-        font-size: 0.875rem;
-        margin-top: 0.35rem;
     }
 </style>
 <div class="row">
@@ -411,33 +398,17 @@ render_admin_header($pageTitle, [], 'user', false);
                         </div>
                     </div>
 
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <div class="user-form-field">
-                                <label class="form-label">Role</label>
-                                <input type="text" class="form-control" value="<?php echo htmlspecialchars($displayRoleLabel, ENT_QUOTES, 'UTF-8'); ?>" readonly>
-                                <div class="role-note"><?php echo htmlspecialchars($roleNote, ENT_QUOTES, 'UTF-8'); ?></div>
-                                <?php if (isset($errors['RoleId'])): ?>
-                                    <div class="invalid-feedback d-block"><?php echo htmlspecialchars($errors['RoleId'], ENT_QUOTES, 'UTF-8'); ?></div>
-                                <?php endif; ?>
-                            </div>
+                    <?php if (isset($errors['RoleId'])): ?>
+                        <div class="alert alert-danger" role="alert">
+                            <?php echo htmlspecialchars($errors['RoleId'], ENT_QUOTES, 'UTF-8'); ?>
                         </div>
+                    <?php endif; ?>
 
-                        <?php if ($canManageStatus): ?>
-                            <div class="col-md-6 mb-3">
-                                <div class="user-form-field">
-                                    <label for="is_active" class="form-label">Status</label>
-                                    <select id="is_active" name="is_active" class="form-select<?php echo isset($errors['IsActive']) ? ' is-invalid' : ''; ?>">
-                                        <option value="1" <?php echo $user['IsActive'] === '1' ? 'selected' : ''; ?>>Active</option>
-                                        <option value="0" <?php echo $user['IsActive'] === '0' ? 'selected' : ''; ?>>Inactive</option>
-                                    </select>
-                                    <?php if (isset($errors['IsActive'])): ?>
-                                        <div class="invalid-feedback"><?php echo htmlspecialchars($errors['IsActive'], ENT_QUOTES, 'UTF-8'); ?></div>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-                        <?php endif; ?>
-                    </div>
+                    <?php if (isset($errors['IsActive'])): ?>
+                        <div class="alert alert-danger" role="alert">
+                            <?php echo htmlspecialchars($errors['IsActive'], ENT_QUOTES, 'UTF-8'); ?>
+                        </div>
+                    <?php endif; ?>
 
                     <div class="mb-0">
                         <button type="submit" class="btn btn-primary waves-effect waves-light me-1" style="background-color: #002253; border-color: #002253;">

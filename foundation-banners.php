@@ -13,9 +13,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delet
     if ($bannerIdToDelete > 0) {
         $deleteStmt = $pdo->prepare(
             'UPDATE FoundationBanner
-             SET IsActive = 0
+             SET IsActive = 0,
+                 IsDeleted = 1
              WHERE FoundatationBannerId = :banner_id
-               AND IsActive = 1'
+               AND IsDeleted = 0'
         );
         $deleteStmt->execute(['banner_id' => $bannerIdToDelete]);
 
@@ -32,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delet
 
 $flash = get_flash_message();
 $banners = $pdo->query(
-    'SELECT FoundatationBannerId, BannerTitle, BannerDescription, BannerImage, IsActive, CreatedDate
+    'SELECT FoundatationBannerId, BannerTitle, BannerDescription, BannerImage, IsActive, IsDeleted, CreatedDate
      FROM FoundationBanner
      ORDER BY FoundatationBannerId DESC'
 )->fetchAll();
@@ -142,6 +143,7 @@ render_admin_header('Foundation Banner Management', [
                                         <?php echo htmlspecialchars($displayDescription, ENT_QUOTES, 'UTF-8'); ?>
                                     </td>
                                     <td>
+                                        <?php $isDeleted = (int) ($banner['IsDeleted'] ?? 0) === 1; ?>
                                         <?php if ((int) $banner['IsActive'] === 1): ?>
                                             <span class="badge rounded-pill bg-success">Active</span>
                                         <?php else: ?>
@@ -151,7 +153,7 @@ render_admin_header('Foundation Banner Management', [
                                     <td><?php echo htmlspecialchars((string) ($banner['CreatedDate'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
                                     <td>
                                         <div class="d-flex align-items-center gap-2">
-                                            <?php if ((int) $banner['IsActive'] === 1): ?>
+                                            <?php if (!$isDeleted): ?>
                                                 <a href="foundation-banner-form.php?id=<?php echo (int) $banner['FoundatationBannerId']; ?>" class="btn btn-sm" style="background-color: #002253; border-color: #002253; color: white;">
                                                     <i class="ri-edit-2-line align-middle me-1"></i> Edit
                                                 </a>
