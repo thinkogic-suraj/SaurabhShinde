@@ -1,5 +1,10 @@
 <?php
-session_start();
+require __DIR__ . '/includes/auth.php';
+
+if (is_admin_logged_in()) {
+    header('Location: dashboard.php');
+    exit;
+}
 
 $config = require __DIR__ . '/config/database.php';
 
@@ -66,6 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $isPasswordValid = password_verify($pass, $storedPassword) || hash_equals($storedPassword, $pass);
 
                     if ($isPasswordValid) {
+                        session_regenerate_id(true);
                         $_SESSION['admin_logged_in'] = true;
                         $_SESSION['admin_id'] = $admin[$idColumn] ?? null;
                         $_SESSION['admin_mobile'] = $mobile;
