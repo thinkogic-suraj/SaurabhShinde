@@ -271,7 +271,7 @@ function render_admin_header(string $title, array $extraCss = [], string $active
                             </a>
                         </li>
 
-                        <li class="<?php echo in_array($activeMenu, ['ward', 'area', 'age-category', 'request-type', 'foundation-banner']) ? 'mm-active' : ''; ?>">
+                        <li class="<?php echo in_array($activeMenu, ['ward', 'area', 'age-category', 'request-type', 'foundation-banner', 'foundation-info']) ? 'mm-active' : ''; ?>">
                             <a href="javascript: void(0);" class="has-arrow waves-effect">
                                 <i class="ri-settings-3-line"></i>
                                 <span>Configuration</span>
@@ -305,6 +305,12 @@ function render_admin_header(string $title, array $extraCss = [], string $active
                                     <a href="foundation-banners.php" class="<?php echo is_link_active('foundation-banner', $activeMenu); ?>">
                                         <i class="ri-image-2-line"></i>
                                         <span>Foundation Banner</span>
+                                    </a>
+                                </li>
+                                <li class="<?php echo is_menu_active('foundation-info', $activeMenu); ?>">
+                                    <a href="foundation-infos.php" class="<?php echo is_link_active('foundation-info', $activeMenu); ?>">
+                                        <i class="ri-building-4-line"></i>
+                                        <span>Foundation Info</span>
                                     </a>
                                 </li>
                             </ul>
